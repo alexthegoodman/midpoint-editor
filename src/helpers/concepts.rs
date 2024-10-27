@@ -1,16 +1,23 @@
-#[tauri::command]
+use std::{fs, path::Path};
+
+use base64::decode;
+use directories::BaseDirs;
+
+use super::utilities::get_common_os_dir;
+
 fn save_concept(
-    state: tauri::State<'_, AppState>,
+    // state: tauri::State<'_, AppState>,
     projectId: String,
     conceptBase64: String,
     conceptFilename: String,
 ) -> String {
-    let handle = &state.handle;
-    let config = handle.config();
-    let package_info = handle.package_info();
-    let env = handle.env();
+    // let handle = &state.handle;
+    // let config = handle.config();
+    // let package_info = handle.package_info();
+    // let env = handle.env();
 
-    let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+    // let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
     let concepts_dir = sync_dir.join(format!("midpoint/projects/{}/concepts", projectId));
 
     // Check if the concepts directory exists, create if it doesn't

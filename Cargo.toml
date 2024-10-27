@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 bytemuck = "1.19.0"
 wgpu = "22.1.0"
 floem = { path = "D:/projects/common/common-floem" }
@@ -17,4 +19,10 @@ strum = "0.26.3"
 strum_macros = "0.26"
 cgmath = "0.18.0"
 undo = "0.51.0"
+reqwest = { version = "0.12.4", features = ["json"] }
+reqwest-graphql = "1.0.0"
 midpoint-engine = { path = "D:/projects/common/midpoint-engine" }
+directories = "5.0.1"
+image = "0.25.1"
+tiff = "0.9.1"
+base64 = "0.22.1"

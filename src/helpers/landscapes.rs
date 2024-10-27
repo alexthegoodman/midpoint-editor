@@ -1,5 +1,12 @@
+use std::{fs, path::Path};
+
+use base64::decode;
+use uuid::Uuid;
+
+use super::utilities::get_common_os_dir;
+
 fn save_landscape(
-    state: tauri::State<'_, AppState>,
+    // state: tauri::State<'_, AppState>,
     projectId: String,
     landscapeBase64: String,
     landscapeFilename: String,
@@ -8,14 +15,16 @@ fn save_landscape(
     soilFilename: String,
     soilBase64: String,
 ) -> String {
-    let handle = &state.handle;
-    let config = handle.config();
-    let package_info = handle.package_info();
-    let env = handle.env();
+    // let handle = &state.handle;
+    // let config = handle.config();
+    // let package_info = handle.package_info();
+    // let env = handle.env();
 
     let landscape_id = Uuid::new_v4();
 
-    let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+    // let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+
     let heightmaps_dir = sync_dir.join(format!(
         "midpoint/projects/{}/landscapes/{}/heightmaps",
         projectId, landscape_id,

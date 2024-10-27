@@ -1,32 +1,13 @@
-use std::sync::{Arc, Mutex, MutexGuard};
-
-use floem::event::{Event, EventListener, EventPropagation};
-use floem::keyboard::{Key, KeyCode, NamedKey};
-use floem::kurbo::Size;
-use floem::peniko::Color;
-use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
-use floem::style::{Background, CursorStyle, Transition};
-use floem::taffy::AlignItems;
-use floem::text::Weight;
-use floem::views::editor::view;
 use floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
 };
-use floem::window::WindowConfig;
-use floem_renderer::gpu_resources::{self, GpuResources};
-use floem_winit::dpi::{LogicalSize, PhysicalSize};
-use floem_winit::event::{ElementState, MouseButton};
-use uuid::Uuid;
-// use views::buttons::{nav_button, option_button, small_button};
-// use winit::{event_loop, window};
+use midpoint_engine::core::Viewport::Viewport;
+use std::sync::{Arc, Mutex, MutexGuard};
 use wgpu::util::DeviceExt;
 
 use floem::GpuHelper;
-use floem::{
-    views::{button, dropdown},
-    IntoView,
-};
+use floem::IntoView;
 
 // use crate::editor_state::EditorState;
 // use crate::PolygonClickHandler;

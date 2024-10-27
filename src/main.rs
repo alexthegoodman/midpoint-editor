@@ -20,7 +20,9 @@ use floem::{Application, CustomRenderCallback};
 use floem::{GpuHelper, View, WindowHandle};
 use undo::{Edit, Record};
 
-mod views;
+pub mod gql;
+pub mod helpers;
+pub mod views;
 
 type RenderCallback<'a> = dyn for<'b> Fn(
         wgpu::CommandEncoder,

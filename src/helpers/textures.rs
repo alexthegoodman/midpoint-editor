@@ -1,16 +1,12 @@
-#[tauri::command]
-fn save_texture(
-    state: tauri::State<'_, AppState>,
-    projectId: String,
-    textureBase64: String,
-    textureFilename: String,
-) -> String {
-    let handle = &state.handle;
-    let config = handle.config();
-    let package_info = handle.package_info();
-    let env = handle.env();
+use std::{fs, path::Path};
 
-    let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+use base64::decode;
+
+use super::utilities::get_common_os_dir;
+
+fn save_texture(projectId: String, textureBase64: String, textureFilename: String) -> String {
+    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+
     let textures_dir = sync_dir.join(format!("midpoint/projects/{}/textures", projectId));
 
     // Check if the concepts directory exists, create if it doesn't

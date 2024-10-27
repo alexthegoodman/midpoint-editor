@@ -1,16 +1,23 @@
-#[tauri::command]
+use std::{fs, path::Path};
+
+use base64::decode;
+
+use super::utilities::get_common_os_dir;
+
 fn save_model(
-    state: tauri::State<'_, AppState>,
+    // state: tauri::State<'_, AppState>,
     projectId: String,
     modelBase64: String,
     modelFilename: String,
 ) -> String {
-    let handle = &state.handle;
-    let config = handle.config();
-    let package_info = handle.package_info();
-    let env = handle.env();
+    // let handle = &state.handle;
+    // let config = handle.config();
+    // let package_info = handle.package_info();
+    // let env = handle.env();
 
-    let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+    // let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
+    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+
     let models_dir = sync_dir.join(format!("midpoint/projects/{}/models", projectId));
 
     // Check if the concepts directory exists, create if it doesn't
@@ -37,30 +44,4 @@ fn save_model(
         .expect("Couldn't save model file");
 
     "success".to_string()
-}
-
-#[tauri::command]
-async fn read_model(
-    state: tauri::State<'_, AppState>,
-    projectId: String,
-    modelFilename: String,
-) -> Result<Vec<u8>, String> {
-    let handle = &state.handle;
-    let config = handle.config();
-    let package_info = handle.package_info();
-    let env = handle.env();
-
-    let sync_dir = PathBuf::from("C:/Users/alext/CommonOSFiles");
-    let model_path = sync_dir.join(format!(
-        "midpoint/projects/{}/models/{}",
-        projectId, modelFilename
-    ));
-
-    let mut file = File::open(&model_path).map_err(|e| format!("Failed to open model: {}", e))?;
-
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes)
-        .map_err(|e| format!("Failed to read model: {}", e))?;
-
-    Ok(bytes)
 }

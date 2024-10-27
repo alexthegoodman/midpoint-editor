@@ -3,21 +3,13 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use floem::common::nav_button;
 use floem::event::{Event, EventListener, EventPropagation};
 use floem::keyboard::{Key, KeyCode, NamedKey};
-use floem::kurbo::Size;
 use floem::peniko::Color;
 use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
-use floem::style::{Background, CursorStyle, Transition};
-use floem::taffy::AlignItems;
-use floem::text::Weight;
-use floem::views::editor::view;
 use floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
 };
-use floem::window::WindowConfig;
-use floem_renderer::gpu_resources::{self, GpuResources};
-use floem_winit::dpi::{LogicalSize, PhysicalSize};
-use floem_winit::event::{ElementState, MouseButton};
+use midpoint_engine::core::Viewport::Viewport;
 use uuid::Uuid;
 // use views::buttons::{nav_button, option_button, small_button};
 // use winit::{event_loop, window};
@@ -28,17 +20,11 @@ use floem::context::PaintState;
 use floem::reactive::{SignalGet, SignalUpdate};
 use floem::views::text;
 use floem::views::Decorators;
-use floem::views::{h_stack, svg, v_stack};
-use floem::{
-    views::{button, dropdown},
-    IntoView,
-};
-use floem::{Application, CustomRenderCallback};
 use floem::{GpuHelper, View, WindowHandle};
 
-use super::assets_panel::assets_view;
-use super::settings_panel::settings_view;
-use super::tools_panel::tools_view;
+// use super::assets_panel::assets_view;
+// use super::settings_panel::settings_view;
+// use super::tools_panel::tools_view;
 
 pub fn tab_interface(
     gpu_helper: Arc<Mutex<GpuHelper>>,
@@ -142,26 +128,26 @@ pub fn tab_interface(
     container(
         container((
             list,
-            tab(
-                move || active_tab.get(),
-                move || tabs.get(),
-                |it| *it,
-                move |it| match it {
-                    "Tools" => tools_view(
-                        gpu_helper.clone(),
-                        editor.clone(),
-                        // editor_cloned.clone(),
-                        viewport.clone(),
-                        // handler.clone(),
-                        // square_handler.clone(),
-                    )
-                    .into_any(),
-                    "Assets" => assets_view().into_any(),
-                    "Settings" => settings_view().into_any(),
-                    _ => label(|| "Not implemented".to_owned()).into_any(),
-                },
-            )
-            .style(|s| s.flex_col().items_start()),
+            // tab(
+            //     move || active_tab.get(),
+            //     move || tabs.get(),
+            //     |it| *it,
+            //     move |it| match it {
+            //         "Tools" => tools_view(
+            //             gpu_helper.clone(),
+            //             editor.clone(),
+            //             // editor_cloned.clone(),
+            //             viewport.clone(),
+            //             // handler.clone(),
+            //             // square_handler.clone(),
+            //         )
+            //         .into_any(),
+            //         "Assets" => assets_view().into_any(),
+            //         "Settings" => settings_view().into_any(),
+            //         _ => label(|| "Not implemented".to_owned()).into_any(),
+            //     },
+            // )
+            // .style(|s| s.flex_col().items_start()),
         ))
         .style(|s| s.flex_col().width_full().height_full()),
     )
