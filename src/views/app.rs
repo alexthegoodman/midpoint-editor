@@ -1,37 +1,30 @@
+use floem::reactive::create_rw_signal;
+use floem::reactive::SignalGet;
 use floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
 };
 use midpoint_engine::core::Viewport::Viewport;
 use std::sync::{Arc, Mutex, MutexGuard};
+use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
 use floem::GpuHelper;
 use floem::IntoView;
 
-// use crate::editor_state::EditorState;
-// use crate::PolygonClickHandler;
+use super::aside::project_tab_interface;
+use super::aside::welcome_tab_interface;
 
-use super::aside::tab_interface;
-// use super::properties_panel::properties_view;
-
-pub fn app_view(
-    //     editor_state: Arc<Mutex<EditorState>>,
-    //     editor: std::sync::Arc<Mutex<common_vector::editor::Editor>>,
+pub fn project_view(
+    // app_state?
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: std::sync::Arc<Mutex<Viewport>>,
 ) -> impl IntoView {
+    // object_selected? model_selected?
+
     container((
-        // label(move || format!("Value: {counter}")).style(|s| s.margin_bottom(10)),
-        tab_interface(
-            gpu_helper.clone(),
-            // editor,
-            // editor_cloned,
-            viewport.clone(),
-            // handler,
-            // square_handler,
-            // polygon_selected,
-        ),
+        project_tab_interface(gpu_helper.clone(), viewport.clone()),
+        // this properties pabel "covers" the tools panels which are inserted within tab_interface
         // dyn_container(
         //     move || polygon_selected.get(),
         //     move |polygon_selected_real| {
@@ -52,5 +45,31 @@ pub fn app_view(
         //     },
         // ),
     ))
-    // .style(|s| s.flex_col().items_center())
+}
+
+pub fn selection_view(
+    // app_state?
+    gpu_helper: Arc<Mutex<GpuHelper>>,
+    viewport: std::sync::Arc<Mutex<Viewport>>,
+) -> impl IntoView {
+    container((welcome_tab_interface(gpu_helper.clone(), viewport.clone()),))
+}
+
+pub fn app_view(
+    // app_state?
+    gpu_helper: Arc<Mutex<GpuHelper>>,
+    viewport: std::sync::Arc<Mutex<Viewport>>,
+) -> impl IntoView {
+    let project_selected = create_rw_signal(Uuid::nil());
+
+    dyn_container(
+        move || project_selected.get(),
+        move |project_selected_real| {
+            if project_selected_real != Uuid::nil() {
+                project_view(gpu_helper.clone(), viewport.clone()).into_any()
+            } else {
+                selection_view(gpu_helper.clone(), viewport.clone()).into_any()
+            }
+        },
+    )
 }

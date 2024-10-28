@@ -27,3 +27,4 @@ image = "0.25.1"
 tiff = "0.9.1"
 base64 = "0.22.1"
 tokio = { version = "1.39.0", features = ["full"] }
+chrono = "0.4.38"

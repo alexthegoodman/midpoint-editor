@@ -498,7 +498,7 @@ fn handle_keyboard_input(
         // Check for Ctrl+Z (undo)
         let modifiers = editor_state.current_modifiers;
 
-        let logical_key_text = event.logical_key.to_text().expect("Couldn't get character");
+        let logical_key_text = event.logical_key.to_text().unwrap_or_default();
         match logical_key_text {
             "z" => {
                 if modifiers.control_key() {
