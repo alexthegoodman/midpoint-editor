@@ -95,7 +95,17 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // Render partial screen content
                     // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
-                    // render_pass.set_scissor_rect(100, 100, 200, 200);
+                    render_pass.set_scissor_rect(
+                        400,
+                        0,
+                        window_handle
+                            .window_width
+                            .expect("Couldn't get window width")
+                            - 400,
+                        window_handle
+                            .window_height
+                            .expect("Couldn't get window height"),
+                    );
 
                     render_pass.set_pipeline(
                         &handle
