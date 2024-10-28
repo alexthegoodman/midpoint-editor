@@ -1,13 +1,14 @@
 use super::utilities::get_common_os_dir;
 use chrono::{DateTime, Local};
+use midpoint_engine::helpers::saved_data::SavedState;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ProjectInfo {
-    name: String,
-    created: DateTime<Local>,
-    modified: DateTime<Local>,
+    pub name: String,
+    pub created: DateTime<Local>,
+    pub modified: DateTime<Local>,
 }
 
 pub fn get_projects() -> Result<Vec<ProjectInfo>, Box<dyn std::error::Error>> {
@@ -56,4 +57,24 @@ pub fn get_projects() -> Result<Vec<ProjectInfo>, Box<dyn std::error::Error>> {
     projects.sort_by(|a, b| b.modified.cmp(&a.modified));
 
     Ok(projects)
+}
+
+pub fn load_project_state(project_id: &str) -> Result<SavedState, Box<dyn std::error::Error>> {
+    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+    let project_dir = sync_dir.join("midpoint/projects").join(project_id);
+    let json_path = project_dir.join("midpoint.json");
+
+    // Check if the project directory and json file exist
+    if !project_dir.exists() {
+        return Err(format!("Project directory '{}' not found", project_id).into());
+    }
+    if !json_path.exists() {
+        return Err(format!("midpoint.json not found in project '{}'", project_id).into());
+    }
+
+    // Read and parse the JSON file
+    let json_content = fs::read_to_string(json_path)?;
+    let state: SavedState = serde_json::from_str(&json_content)?;
+
+    Ok(state)
 }

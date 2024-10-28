@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use floem::common::{create_icon, nav_button};
@@ -5,6 +6,7 @@ use floem::event::{Event, EventListener, EventPropagation};
 use floem::keyboard::{Key, KeyCode, NamedKey};
 use floem::peniko::Color;
 use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use floem::style::CursorStyle;
 use floem::taffy::AlignItems;
 use floem::views::{
     container, dyn_container, dyn_stack, empty, h_stack, label, scroll, stack, svg, tab,
@@ -24,7 +26,8 @@ use floem::views::Decorators;
 use floem::IntoView;
 use floem::{GpuHelper, View, WindowHandle};
 
-use crate::helpers::projects::{get_projects, ProjectInfo};
+use crate::editor_state::StateHelper;
+use crate::helpers::projects::{get_projects, load_project_state, ProjectInfo};
 
 pub fn project_item(
     project_info: ProjectInfo,
@@ -35,22 +38,26 @@ pub fn project_item(
     h_stack((
         svg(create_icon(icon_name))
             .style(|s| s.width(24).height(24).color(Color::BLACK))
-            .style(|s| s.margin_right(7.0))
-            .on_event_stop(
-                floem::event::EventListener::PointerDown,
-                |_| { /* Disable dragging for this view */ },
-            ),
+            .style(|s| s.margin_right(7.0)),
+        // .on_event_stop(
+        //     floem::event::EventListener::PointerDown,
+        //     |_| { /* Disable dragging for this view */ },
+        // ),
         label(move || project_label.to_string()),
     ))
     .style(|s| {
         s.width(220.0)
             .border_radius(15.0)
             .align_items(AlignItems::Center)
+            .justify_start()
             .padding_vert(8)
             .background(Color::rgb(255.0, 239.0, 194.0))
             .border_bottom(1)
             .border_color(Color::rgb(200.0, 200.0, 200.0))
-            .hover(|s| s.background(Color::rgb(222.0, 206.0, 160.0)))
+            .hover(|s| {
+                s.background(Color::rgb(222.0, 206.0, 160.0))
+                    .cursor(CursorStyle::Pointer)
+            })
             .active(|s| s.background(Color::rgb(237.0, 218.0, 164.0)))
     })
     // .on_click(|_| {
@@ -60,6 +67,7 @@ pub fn project_item(
 }
 
 pub fn project_browser(
+    state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
@@ -74,8 +82,38 @@ pub fn project_browser(
         scroll(
             dyn_stack(
                 move || project_list.get(),
-                move |project| project.clone(),
-                move |project| project_item(project, project_list, "Project".to_string(), "sphere"),
+                move |project| project.name.clone(),
+                move |project| {
+                    project_item(
+                        project.clone(),
+                        project_list,
+                        "Project".to_string(),
+                        "sphere",
+                    )
+                    .on_click({
+                        let state_helper = state_helper.clone();
+
+                        move |_| {
+                            let mut state_helper = state_helper.lock().unwrap();
+
+                            let saved_state = load_project_state(&project.name)
+                                .expect("Couldn't get project saved state");
+                            let saved_state = Arc::new(Mutex::new(saved_state));
+                            state_helper.saved_state = Some(saved_state);
+
+                            let project_selected = state_helper
+                                .project_selected_signal
+                                .expect("Couldn't get project selection signal");
+                            let uuid = Uuid::from_str(&project.name.clone())
+                                .expect("Couldn't convert project name to id");
+                            project_selected.set(uuid);
+
+                            println!("Project selected {:?}", project.name.clone());
+
+                            EventPropagation::Stop
+                        }
+                    })
+                },
             )
             .style(|s| s.flex_col().column_gap(5).padding(10))
             .into_view(),

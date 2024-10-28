@@ -23,6 +23,8 @@ use floem::views::Decorators;
 use floem::IntoView;
 use floem::{GpuHelper, View, WindowHandle};
 
+use crate::editor_state::StateHelper;
+
 use super::editor_settings::editor_settings;
 use super::project_browser::project_browser;
 
@@ -31,13 +33,9 @@ use super::project_browser::project_browser;
 // use super::tools_panel::tools_view;
 
 pub fn project_tab_interface(
+    state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
-    // editor: std::sync::Arc<Mutex<common_vector::editor::Editor>>,
-    // editor_cloned: std::sync::Arc<Mutex<common_vector::editor::Editor>>,
     viewport: Arc<Mutex<Viewport>>,
-    // mut handler: std::sync::Arc<Mutex<Handler>>,
-    // mut square_handler: std::sync::Arc<Mutex<Handler>>,
-    // polygon_selected: RwSignal<bool>,
 ) -> impl View {
     // let editor_cloned = Arc::clone(&editor);
 
@@ -175,16 +173,10 @@ pub fn project_tab_interface(
 }
 
 pub fn welcome_tab_interface(
+    state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
-    // editor: std::sync::Arc<Mutex<common_vector::editor::Editor>>,
-    // editor_cloned: std::sync::Arc<Mutex<common_vector::editor::Editor>>,
     viewport: Arc<Mutex<Viewport>>,
-    // mut handler: std::sync::Arc<Mutex<Handler>>,
-    // mut square_handler: std::sync::Arc<Mutex<Handler>>,
-    // polygon_selected: RwSignal<bool>,
 ) -> impl View {
-    // let editor_cloned = Arc::clone(&editor);
-
     let tabs: im::Vector<&str> = vec!["Projects", "Settings"].into_iter().collect();
     let (tabs, _set_tabs) = create_signal(tabs);
     let (active_tab, set_active_tab) = create_signal(0);
@@ -282,7 +274,10 @@ pub fn welcome_tab_interface(
                 move || tabs.get(),
                 |it| *it,
                 move |it| match it {
-                    "Projects" => project_browser(gpu_helper.clone(), viewport.clone()).into_any(),
+                    "Projects" => {
+                        project_browser(state_helper.clone(), gpu_helper.clone(), viewport.clone())
+                            .into_any()
+                    }
                     "Settings" => editor_settings(gpu_helper.clone(), viewport.clone()).into_any(),
                     _ => label(|| "Not implemented".to_owned()).into_any(),
                 },

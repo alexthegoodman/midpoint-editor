@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use bytemuck::Contiguous;
 use cgmath::Vector4;
-use editor_state::{EditorState, ObjectEdit};
+use editor_state::{EditorState, ObjectEdit, StateHelper};
 use floem::common::{nav_button, option_button, small_button};
 use floem::kurbo::Size;
 use floem::window::WindowConfig;
@@ -546,6 +546,9 @@ async fn main() {
     };
 
     let mut gpu_helper = Arc::new(Mutex::new(GpuHelper::new()));
+    let mut state_helper = Arc::new(Mutex::new(StateHelper::new()));
+
+    let state_2 = Arc::clone(&state_helper);
 
     let gpu_cloned = Arc::clone(&gpu_helper);
 
@@ -575,6 +578,7 @@ async fn main() {
             app_view(
                 // Arc::clone(&editor_state),
                 // Arc::clone(&editor),
+                Arc::clone(&state_helper),
                 Arc::clone(&gpu_helper),
                 Arc::clone(&viewport),
             )
@@ -940,13 +944,18 @@ async fn main() {
 
                 let renderer_state = Arc::new(Mutex::new(state));
 
-                let state_2 = Arc::clone(&renderer_state);
+                let renderer_state_2 = Arc::clone(&renderer_state);
+                let renderer_state_3 = Arc::clone(&renderer_state);
 
                 // initialize_renderer_state(state);
 
+                let mut state_helper = state_2.lock().unwrap();
+
+                state_helper.renderer_state = Some(renderer_state_3);
+
                 let editor_state = Arc::new(Mutex::new(EditorState::new(renderer_state, record)));
 
-                window_handle.user_engine = Some(state_2);
+                window_handle.user_engine = Some(renderer_state_2);
 
                 window_handle.handle_cursor_moved = handle_cursor_moved(
                     editor_state.clone(),

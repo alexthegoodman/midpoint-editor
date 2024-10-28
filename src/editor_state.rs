@@ -5,6 +5,7 @@ use floem::keyboard::ModifiersState;
 use floem::reactive::{RwSignal, SignalUpdate};
 use midpoint_engine::core::RendererState::ObjectProperty;
 use midpoint_engine::core::RendererState::RendererState;
+use midpoint_engine::helpers::saved_data::SavedState;
 use undo::Edit;
 use undo::Record;
 use uuid::Uuid;
@@ -132,6 +133,22 @@ impl EditorState {
 
         if record.redo(&mut self.record_state).is_some() {
             println!("Redo successful");
+        }
+    }
+}
+
+pub struct StateHelper {
+    pub renderer_state: Option<Arc<Mutex<RendererState>>>,
+    pub saved_state: Option<Arc<Mutex<SavedState>>>,
+    pub project_selected_signal: Option<RwSignal<Uuid>>,
+}
+
+impl StateHelper {
+    pub fn new() -> Self {
+        Self {
+            renderer_state: None,
+            saved_state: None,
+            project_selected_signal: None,
         }
     }
 }
