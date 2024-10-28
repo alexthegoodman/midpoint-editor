@@ -46,8 +46,15 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
               window_handle: &WindowHandle| {
             let mut handle = window_handle.borrow();
 
+            let engine = handle
+                .user_engine
+                .as_ref()
+                .expect("Couldn't get user engine")
+                .lock()
+                .unwrap();
+
             if let Some(gpu_resources) = &handle.gpu_resources {
-                {
+                if engine.current_view == "scene".to_string() {
                     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: None,
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -114,54 +121,6 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             .expect("Couldn't fetch render pipeline"),
                     );
 
-                    let engine = handle
-                        .user_engine
-                        .as_ref()
-                        .expect("Couldn't get user engine")
-                        .lock()
-                        .unwrap();
-
-                    // let editor = handle
-                    //     .user_editor
-                    //     .as_ref()
-                    //     .expect("Couldn't get user editor")
-                    //     .lock()
-                    //     .unwrap();
-
-                    // let camera_binding = editor
-                    //     .camera_binding
-                    //     .as_ref()
-                    //     .expect("Couldn't get camera binding");
-
-                    // camera_binding.update(&gpu_resources.queue, &editor.camera);
-                    // editor.update_camera_binding(&gpu_resources.queue);
-
-                    // render_pass.set_bind_group(0, &camera_binding.bind_group, &[]);
-
-                    // for (poly_index, polygon) in editor.polygons.iter().enumerate() {
-                    //     render_pass.set_vertex_buffer(0, polygon.vertex_buffer.slice(..));
-                    //     render_pass.set_index_buffer(
-                    //         polygon.index_buffer.slice(..),
-                    //         wgpu::IndexFormat::Uint32,
-                    //     );
-                    //     render_pass.draw_indexed(0..polygon.indices.len() as u32, 0, 0..1);
-                    // }
-
-                    // // for now render just the active brush stroke
-                    // for (stroke_index, stroke) in editor.brush_strokes.iter().enumerate() {
-                    //     // Only render if both buffers are initialized
-                    //     if let (Some(vertex_buffer), Some(index_buffer)) =
-                    //         (&stroke.vertex_buffer, &stroke.index_buffer)
-                    //     {
-                    //         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                    //         render_pass.set_index_buffer(
-                    //             index_buffer.slice(..),
-                    //             wgpu::IndexFormat::Uint32,
-                    //         );
-                    //         render_pass.draw_indexed(0..stroke.indices.len() as u32, 0, 0..1);
-                    //     }
-                    // }
-
                     let viewport = engine.viewport.lock().unwrap();
                     let window_size = WindowSize {
                         width: viewport.width as u32,
@@ -170,7 +129,7 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     let mut camera = get_camera();
 
-                    // bad to call here?
+                    // TODO: bad to call on every frame?
                     camera.update();
 
                     let camera_matrix = camera.view_projection_matrix;
@@ -222,9 +181,6 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         render_pass.draw_indexed(0..cube.index_count as u32, 0, 0..1);
                     }
 
-                    // web_sys::console::log_1(&"Model count...".into());
-                    // web_sys::console::log_1(&state.models.len().into());
-
                     for model in &engine.models {
                         for mesh in &model.meshes {
                             mesh.transform.update_uniform_buffer(&gpu_resources.queue);
@@ -267,62 +223,6 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             render_pass.draw_indexed(0..landscape.index_count as u32, 0, 0..1);
                         }
                     }
-
-                    // println!("Render size {:?}", window_size);
-
-                    // let camera = editor.camera.expect("Couldn't get camera");
-
-                    // let ndc_position = point_to_ndc(editor.last_top_left, &window_size);
-                    // let (vertices, indices, vertex_buffer, index_buffer) = draw_dot(
-                    //     &gpu_resources.device,
-                    //     &window_size,
-                    //     Point {
-                    //         x: ndc_position.x,
-                    //         y: ndc_position.y,
-                    //     },
-                    //     rgb_to_wgpu(47, 131, 222, 1.0),
-                    //     &camera,
-                    // ); // Green dot
-
-                    // render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                    // render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-                    // render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
-
-                    // if let Some(edge_point) = editor.hover_point {
-                    //     let ndc_position = point_to_ndc(edge_point.point, &window_size);
-                    //     let (vertices, indices, vertex_buffer, index_buffer) = draw_dot(
-                    //         &gpu_resources.device,
-                    //         &window_size,
-                    //         Point {
-                    //             x: ndc_position.x,
-                    //             y: ndc_position.y,
-                    //         },
-                    //         rgb_to_wgpu(47, 131, 222, 1.0),
-                    //         &camera,
-                    //     ); // Green dot
-
-                    //     render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                    //     render_pass
-                    //         .set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-                    //     render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
-                    // }
-
-                    // // Draw guide lines
-                    // for guide_line in &editor.guide_lines {
-                    //     let (vertices, indices, vertex_buffer, index_buffer) =
-                    //         create_guide_line_buffers(
-                    //             &gpu_resources.device,
-                    //             &window_size,
-                    //             guide_line.start,
-                    //             guide_line.end,
-                    //             rgb_to_wgpu(47, 131, 222, 1.0), // Blue color for guide lines
-                    //         );
-
-                    //     render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                    //     render_pass
-                    //         .set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-                    //     render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
-                    // }
                 }
 
                 let command_buffer = encoder.finish();

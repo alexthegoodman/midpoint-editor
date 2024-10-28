@@ -83,22 +83,46 @@ pub fn project_tab_interface(
                     "Settings" => "gear",
                     _ => "plus",
                 };
+                let destination_view = match item {
+                    "Concepts" => "concepts",
+                    "Scene" => "scene",
+                    "Map" => "map",
+                    "Story" => "story",
+                    "Audio" => "audio",
+                    "Performance" => "performance",
+                    "Settings" => "project_settings",
+                    _ => "plus",
+                };
                 stack((
                     // label(move || item).style(|s| s.font_size(18.0)),
                     // svg(create_icon("plus")).style(|s| s.width(24).height(24)),
                     nav_button(
                         item,
                         icon_name,
-                        Some(move || {
-                            println!("Click...");
-                            set_active_tab.update(|v: &mut usize| {
-                                *v = tabs
-                                    .get_untracked()
-                                    .iter()
-                                    .position(|it| *it == item)
+                        Some({
+                            let state_helper = state_helper.clone();
+
+                            move || {
+                                println!("Click...");
+                                set_active_tab.update(|v: &mut usize| {
+                                    *v = tabs
+                                        .get_untracked()
+                                        .iter()
+                                        .position(|it| *it == item)
+                                        .unwrap();
+                                });
+
+                                let mut state_helper = state_helper.lock().unwrap();
+                                let mut renderer_state = state_helper
+                                    .renderer_state
+                                    .as_mut()
+                                    .expect("Couldn't get RendererState")
+                                    .lock()
                                     .unwrap();
-                            });
-                            // EventPropagation::Continue
+                                renderer_state.current_view = destination_view.to_string();
+
+                                // EventPropagation::Continue
+                            }
                         }),
                         active,
                     ),
@@ -177,6 +201,8 @@ pub fn welcome_tab_interface(
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
+    let state_2 = Arc::clone(&state_helper);
+
     let tabs: im::Vector<&str> = vec!["Projects", "Settings"].into_iter().collect();
     let (tabs, _set_tabs) = create_signal(tabs);
     let (active_tab, set_active_tab) = create_signal(0);
@@ -199,22 +225,41 @@ pub fn welcome_tab_interface(
                     "Settings" => "gear",
                     _ => "plus",
                 };
+                let destination_view = match item {
+                    "Projects" => "projects",
+                    "Settings" => "editor_settings",
+                    _ => "plus",
+                };
                 stack((
                     // label(move || item).style(|s| s.font_size(18.0)),
                     // svg(create_icon("plus")).style(|s| s.width(24).height(24)),
                     nav_button(
                         item,
                         icon_name,
-                        Some(move || {
-                            println!("Click...");
-                            set_active_tab.update(|v: &mut usize| {
-                                *v = tabs
-                                    .get_untracked()
-                                    .iter()
-                                    .position(|it| *it == item)
+                        Some({
+                            let state_helper = state_helper.clone();
+
+                            move || {
+                                println!("Click...");
+                                set_active_tab.update(|v: &mut usize| {
+                                    *v = tabs
+                                        .get_untracked()
+                                        .iter()
+                                        .position(|it| *it == item)
+                                        .unwrap();
+                                });
+
+                                let mut state_helper = state_helper.lock().unwrap();
+                                let mut renderer_state = state_helper
+                                    .renderer_state
+                                    .as_mut()
+                                    .expect("Couldn't get RendererState")
+                                    .lock()
                                     .unwrap();
-                            });
-                            // EventPropagation::Continue
+                                renderer_state.current_view = destination_view.to_string();
+
+                                // EventPropagation::Continue
+                            }
                         }),
                         active,
                     ),
@@ -275,7 +320,7 @@ pub fn welcome_tab_interface(
             |it| *it,
             move |it| match it {
                 "Projects" => {
-                    project_browser(state_helper.clone(), gpu_helper.clone(), viewport.clone())
+                    project_browser(state_2.clone(), gpu_helper.clone(), viewport.clone())
                         .into_any()
                 }
                 "Settings" => editor_settings(gpu_helper.clone(), viewport.clone()).into_any(),

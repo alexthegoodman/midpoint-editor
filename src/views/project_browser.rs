@@ -96,17 +96,29 @@ pub fn project_browser(
                         move |_| {
                             let mut state_helper = state_helper.lock().unwrap();
 
+                            // retrieve saved state of project and set on helper
                             let saved_state = load_project_state(&project.name)
                                 .expect("Couldn't get project saved state");
                             let saved_state = Arc::new(Mutex::new(saved_state));
                             state_helper.saved_state = Some(saved_state);
 
+                            // update the UI signal
                             let project_selected = state_helper
                                 .project_selected_signal
                                 .expect("Couldn't get project selection signal");
                             let uuid = Uuid::from_str(&project.name.clone())
                                 .expect("Couldn't convert project name to id");
-                            project_selected.set(uuid);
+                            project_selected.set(uuid.clone());
+
+                            // update renderer_state with project_selected (and current_view if necessary)
+                            let mut renderer_state = state_helper
+                                .renderer_state
+                                .as_mut()
+                                .expect("Couldn't find RendererState")
+                                .lock()
+                                .unwrap();
+                            renderer_state.project_selected = Some(uuid.clone());
+                            renderer_state.current_view = "scene".to_string();
 
                             println!("Project selected {:?}", project.name.clone());
 
