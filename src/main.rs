@@ -358,7 +358,7 @@ fn handle_cursor_moved(
             //     positionY as f32,
             // );
 
-            handle_mouse_move(positionX as f32, positionY as f32);
+            // handle_mouse_move(positionX as f32, positionY as f32);
         },
     ))
 }

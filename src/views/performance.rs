@@ -8,11 +8,11 @@ use wgpu::util::DeviceExt;
 use floem::views::Decorators;
 use floem::{GpuHelper, View, WindowHandle};
 
-pub fn project_settings(
+pub fn performance_view(
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
-    v_stack(((label(|| "Project Settings"),)))
+    v_stack(((label(|| "Performance"),)))
         .style(|s| card_styles(s))
         .style(|s| s.width(300.0))
 }

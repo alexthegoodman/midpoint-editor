@@ -25,8 +25,15 @@ use floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
 
+use super::audio::audio_view;
+use super::concepts::concepts_view;
 use super::editor_settings::editor_settings;
+use super::map::maps_view;
+use super::performance::performance_view;
 use super::project_browser::project_browser;
+use super::project_settings::project_settings;
+use super::scene::scene_view;
+use super::story::story_view;
 
 // use super::assets_panel::assets_view;
 // use super::settings_panel::settings_view;
@@ -40,8 +47,8 @@ pub fn project_tab_interface(
     // let editor_cloned = Arc::clone(&editor);
 
     let tabs: im::Vector<&str> = vec![
-        "Concepts",
         "Scene",
+        "Concepts",
         "Map",
         "Story",
         "Audio",
@@ -143,33 +150,26 @@ pub fn project_tab_interface(
     })
     .scroll_style(|s| s.shrink_to_fit());
 
-    container(
-        container((
-            list,
-            // tab(
-            //     move || active_tab.get(),
-            //     move || tabs.get(),
-            //     |it| *it,
-            //     move |it| match it {
-            //         "Tools" => tools_view(
-            //             gpu_helper.clone(),
-            //             editor.clone(),
-            //             // editor_cloned.clone(),
-            //             viewport.clone(),
-            //             // handler.clone(),
-            //             // square_handler.clone(),
-            //         )
-            //         .into_any(),
-            //         "Assets" => assets_view().into_any(),
-            //         "Settings" => settings_view().into_any(),
-            //         _ => label(|| "Not implemented".to_owned()).into_any(),
-            //     },
-            // )
-            // .style(|s| s.flex_col().items_start()),
-        ))
-        .style(|s| s.flex_col().width_full().height_full()),
-    )
-    .style(|s| s.width_full().height_full())
+    container((
+        list,
+        tab(
+            move || active_tab.get(),
+            move || tabs.get(),
+            |it| *it,
+            move |it| match it {
+                "Concepts" => concepts_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Scene" => scene_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Map" => maps_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Story" => story_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Audio" => audio_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Performance" => performance_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Settings" => project_settings(gpu_helper.clone(), viewport.clone()).into_any(),
+                _ => label(|| "Not implemented".to_owned()).into_any(),
+            },
+        )
+        .style(|s| s.flex_col().items_start().margin_top(20.0)),
+    ))
+    .style(|s| s.flex_col().width_full().height_full())
 }
 
 pub fn welcome_tab_interface(
@@ -266,25 +266,23 @@ pub fn welcome_tab_interface(
     })
     .scroll_style(|s| s.shrink_to_fit());
 
-    container(
-        container((
-            list,
-            tab(
-                move || active_tab.get(),
-                move || tabs.get(),
-                |it| *it,
-                move |it| match it {
-                    "Projects" => {
-                        project_browser(state_helper.clone(), gpu_helper.clone(), viewport.clone())
-                            .into_any()
-                    }
-                    "Settings" => editor_settings(gpu_helper.clone(), viewport.clone()).into_any(),
-                    _ => label(|| "Not implemented".to_owned()).into_any(),
-                },
-            )
-            .style(|s| s.flex_col().items_start()),
-        ))
-        .style(|s| s.flex_col().width_full().height_full()),
-    )
-    .style(|s| s.width_full().height_full())
+    container((
+        list, // tab list
+        tab(
+            // active tab
+            move || active_tab.get(),
+            move || tabs.get(),
+            |it| *it,
+            move |it| match it {
+                "Projects" => {
+                    project_browser(state_helper.clone(), gpu_helper.clone(), viewport.clone())
+                        .into_any()
+                }
+                "Settings" => editor_settings(gpu_helper.clone(), viewport.clone()).into_any(),
+                _ => label(|| "Not implemented".to_owned()).into_any(),
+            },
+        )
+        .style(|s| s.flex_col().items_start().margin_top(20.0)),
+    ))
+    .style(|s| s.flex_col().width_full().height_full())
 }

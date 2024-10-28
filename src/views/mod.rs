@@ -1,5 +1,11 @@
 pub mod app;
 pub mod aside;
+pub mod audio;
+pub mod concepts;
 pub mod editor_settings;
+pub mod map;
+pub mod performance;
 pub mod project_browser;
 pub mod project_settings;
+pub mod scene;
+pub mod story;

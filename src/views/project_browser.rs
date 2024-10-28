@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use floem::common::{create_icon, nav_button};
+use floem::common::{card_styles, create_icon, nav_button};
 use floem::event::{Event, EventListener, EventPropagation};
 use floem::keyboard::{Key, KeyCode, NamedKey};
 use floem::peniko::Color;
@@ -46,16 +46,16 @@ pub fn project_item(
         label(move || project_label.to_string()),
     ))
     .style(|s| {
-        s.width(220.0)
+        s.width(260.0)
             .border_radius(15.0)
-            .align_items(AlignItems::Center)
+            .align_items(AlignItems::FlexStart)
             .justify_start()
             .padding_vert(8)
-            .background(Color::rgb(255.0, 239.0, 194.0))
+            .background(Color::rgb(255.0, 255.0, 255.0))
             .border_bottom(1)
             .border_color(Color::rgb(200.0, 200.0, 200.0))
             .hover(|s| {
-                s.background(Color::rgb(222.0, 206.0, 160.0))
+                s.background(Color::rgb(100.0, 100.0, 100.0))
                     .cursor(CursorStyle::Pointer)
             })
             .active(|s| s.background(Color::rgb(237.0, 218.0, 164.0)))
@@ -77,8 +77,8 @@ pub fn project_browser(
 
     let project_list = create_rw_signal(projects); // for long lists technically
 
-    container((
-        (label(|| "Select a Project")),
+    v_stack((
+        (label(|| "Select a Project").style(|s| s.margin_bottom(4.0))),
         scroll(
             dyn_stack(
                 move || project_list.get(),
@@ -115,9 +115,10 @@ pub fn project_browser(
                     })
                 },
             )
-            .style(|s| s.flex_col().column_gap(5).padding(10))
+            // .style(|s| s.flex_col().column_gap(5).padding(10))
             .into_view(),
         ),
     ))
-    .style(|s| s.padding_vert(20.0).flex_col().items_center())
+    .style(|s| card_styles(s))
+    .style(|s| s.width(300.0))
 }
