@@ -46,6 +46,8 @@ pub fn project_tab_interface(
 ) -> impl View {
     // let editor_cloned = Arc::clone(&editor);
 
+    let state_2 = Arc::clone(&state_helper);
+
     let tabs: im::Vector<&str> = vec![
         "Scene",
         "Concepts",
@@ -182,7 +184,9 @@ pub fn project_tab_interface(
             |it| *it,
             move |it| match it {
                 "Concepts" => concepts_view(gpu_helper.clone(), viewport.clone()).into_any(),
-                "Scene" => scene_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                "Scene" => {
+                    scene_view(state_2.clone(), gpu_helper.clone(), viewport.clone()).into_any()
+                }
                 "Map" => maps_view(gpu_helper.clone(), viewport.clone()).into_any(),
                 "Story" => story_view(gpu_helper.clone(), viewport.clone()).into_any(),
                 "Audio" => audio_view(gpu_helper.clone(), viewport.clone()).into_any(),
