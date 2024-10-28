@@ -26,3 +26,4 @@ directories = "5.0.1"
 image = "0.25.1"
 tiff = "0.9.1"
 base64 = "0.22.1"
+tokio = { version = "1.39.0", features = ["full"] }
