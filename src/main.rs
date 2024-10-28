@@ -11,11 +11,9 @@ use floem::window::WindowConfig;
 use floem_renderer::gpu_resources::{self, GpuResources};
 use floem_winit::dpi::{LogicalSize, PhysicalSize};
 use floem_winit::event::{ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta};
-use midpoint_engine::core::RendererState::{
-    get_renderer_state, initialize_renderer_state, Point, RendererState, WindowSize,
-};
+use midpoint_engine::core::RendererState::{Point, RendererState, WindowSize};
 use midpoint_engine::core::Viewport::Viewport;
-use midpoint_engine::startup::{get_camera, Vertex};
+use midpoint_engine::startup::{get_camera, handle_key_press, handle_mouse_move, Vertex};
 use uuid::Uuid;
 use views::app::app_view;
 // use winit::{event_loop, window};
@@ -349,6 +347,8 @@ fn handle_cursor_moved(
             //     positionX as f32,
             //     positionY as f32,
             // );
+
+            handle_mouse_move(positionX as f32, positionY as f32);
         },
     ))
 }
@@ -490,32 +490,38 @@ fn handle_keyboard_input(
     viewport: std::sync::Arc<Mutex<Viewport>>,
 ) -> Option<Box<dyn FnMut(KeyEvent)>> {
     Some(Box::new(move |event: KeyEvent| {
-        // if event.state != ElementState::Pressed {
-        //     return;
-        // }
+        if event.state != ElementState::Pressed {
+            return;
+        }
 
-        // let mut editor_state = editor_state.lock().unwrap();
-        // // Check for Ctrl+Z (undo)
-        // let modifiers = editor_state.current_modifiers;
+        let mut editor_state = editor_state.lock().unwrap();
+        // Check for Ctrl+Z (undo)
+        let modifiers = editor_state.current_modifiers;
 
-        // match event.logical_key {
-        //     Key::Character(c) if c == SmolStr::new("z") => {
-        //         if modifiers.control_key() {
-        //             if modifiers.shift_key() {
-        //                 editor_state.redo(); // Ctrl+Shift+Z
-        //             } else {
-        //                 println!("undo!");
-        //                 editor_state.undo(); // Ctrl+Z
-        //             }
-        //         }
-        //     }
-        //     Key::Character(c) if c == SmolStr::new("y") => {
-        //         if modifiers.control_key() {
-        //             editor_state.redo(); // Ctrl+Y
-        //         }
-        //     }
-        //     _ => {}
-        // }
+        let logical_key_text = event.logical_key.to_text().expect("Couldn't get character");
+        match logical_key_text {
+            "z" => {
+                if modifiers.control_key() {
+                    if modifiers.shift_key() {
+                        editor_state.redo(); // Ctrl+Shift+Z
+                    } else {
+                        editor_state.undo(); // Ctrl+Z
+                    }
+                }
+            }
+            "y" => {
+                if modifiers.control_key() {
+                    editor_state.redo(); // Ctrl+Y
+                }
+            }
+            _ => {}
+        }
+
+        handle_key_press(
+            Arc::clone(&editor_state.renderer_state),
+            logical_key_text,
+            true,
+        );
     }))
 }
 
@@ -549,6 +555,8 @@ async fn main() {
     )));
 
     let viewport_2 = Arc::clone(&viewport);
+    let viewport_3 = Arc::clone(&viewport);
+    let viewport_4 = Arc::clone(&viewport);
 
     // let mut editor = Arc::new(Mutex::new(Editor::new(viewport.clone())));
 
@@ -577,7 +585,7 @@ async fn main() {
                     window_size.width as f64,
                     window_size.height as f64,
                 ))
-                .title("CommonOS Sensor"),
+                .title("CommonOS Midpoint"),
         ),
     );
 
@@ -863,13 +871,13 @@ async fn main() {
                             cache: None,
                             vertex: wgpu::VertexState {
                                 module: &shader_module_vert_primary,
-                                entry_point: "vs_main", // name of the entry point in your vertex shader
+                                entry_point: "main", // name of the entry point in your vertex shader
                                 buffers: &[Vertex::desc()], // Make sure your Vertex::desc() matches your vertex structure
                                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                             },
                             fragment: Some(wgpu::FragmentState {
                                 module: &shader_module_frag_primary,
-                                entry_point: "fs_main", // name of the entry point in your fragment shader
+                                entry_point: "main", // name of the entry point in your fragment shader
                                 targets: &[Some(wgpu::ColorTargetState {
                                     format: swapchain_format,
                                     // blend: Some(wgpu::BlendState::REPLACE),
@@ -930,15 +938,21 @@ async fn main() {
                 )
                 .await;
 
-                initialize_renderer_state(state);
+                let renderer_state = Arc::new(Mutex::new(state));
 
-                let state = get_renderer_state();
+                let state_2 = Arc::clone(&renderer_state);
 
-                // window_handle.handle_cursor_moved = handle_cursor_moved(
-                //     cloned2.clone(),
-                //     gpu_resources.clone(),
-                //     cloned_viewport.clone(),
-                // );
+                // initialize_renderer_state(state);
+
+                let editor_state = Arc::new(Mutex::new(EditorState::new(renderer_state, record)));
+
+                window_handle.user_engine = Some(state_2);
+
+                window_handle.handle_cursor_moved = handle_cursor_moved(
+                    editor_state.clone(),
+                    gpu_resources.clone(),
+                    viewport_3.clone(),
+                );
                 // window_handle.handle_mouse_input = handle_mouse_input(
                 //     state_4.clone(),
                 //     cloned3.clone(),
@@ -959,8 +973,11 @@ async fn main() {
                 //     gpu_resources.clone(),
                 //     cloned_viewport3.clone(),
                 // );
-                // window_handle.handle_keyboard_input =
-                //     handle_keyboard_input(state_2, gpu_resources.clone(), cloned_viewport3.clone());
+                window_handle.handle_keyboard_input = handle_keyboard_input(
+                    editor_state.clone(),
+                    gpu_resources.clone(),
+                    viewport_4.clone(),
+                );
 
                 // // *** TODO: Test Scene *** //
 
@@ -968,8 +985,8 @@ async fn main() {
 
                 // gpu_clonsed2.lock().unwrap().gpu_resources = Some(Arc::clone(&gpu_resources));
                 // editor.gpu_resources = Some(Arc::clone(&gpu_resources));
-                // window_handle.gpu_resources = Some(gpu_resources);
-                // window_handle.gpu_helper = Some(gpu_clonsed2);
+                window_handle.gpu_resources = Some(gpu_resources);
+                window_handle.gpu_helper = Some(gpu_cloned);
                 // editor.window = window_handle.window.clone();
             }
             .await;
