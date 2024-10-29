@@ -8,8 +8,9 @@ use floem::peniko::Color;
 use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
 use floem::style::CursorStyle;
 use floem::taffy::AlignItems;
+use floem::text::Weight;
 use floem::views::{
-    container, dyn_container, dyn_stack, empty, h_stack, label, scroll, stack, svg, tab,
+    container, dyn_container, dyn_stack, empty, h_stack, img, label, scroll, stack, svg, tab,
     text_input, v_stack, virtual_list, virtual_stack, VirtualDirection, VirtualItemSize,
 };
 use midpoint_engine::core::Viewport::Viewport;
@@ -28,6 +29,8 @@ use floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
 use crate::helpers::projects::{get_projects, load_project_state, ProjectInfo};
+
+use super::shared::{test_image, test_static_image};
 
 pub fn project_item(
     project_info: ProjectInfo,
@@ -48,7 +51,7 @@ pub fn project_item(
     .style(|s| {
         s.width(260.0)
             .border_radius(15.0)
-            .align_items(AlignItems::FlexStart)
+            .align_items(AlignItems::Center)
             .justify_start()
             .padding_vert(8)
             .background(Color::rgb(255.0, 255.0, 255.0))

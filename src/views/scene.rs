@@ -117,9 +117,10 @@ pub fn scene_view(
                 .keyboard_navigatable()
             },
         )
-        .style(|s| s.flex_row().width(260.0).padding_vert(7.0).height(45.0))
+        .style(|s| s.flex_row().width(260.0).padding_vert(7.0).height(55.0))
     })
-    .scroll_style(|s| s.shrink_to_fit());
+    // .scroll_style(|s| s.shrink_to_fit())
+    .style(|s| s.height(55.0));
 
     v_stack((
         (label(|| "Scene"),),

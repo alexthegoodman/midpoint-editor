@@ -10,5 +10,6 @@ pub mod performance;
 pub mod project_browser;
 pub mod project_settings;
 pub mod scene;
+pub mod shared;
 pub mod story;
 pub mod texture_browser;

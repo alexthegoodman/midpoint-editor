@@ -1241,6 +1241,7 @@ dependencies = [
  "peniko",
  "raw-window-handle 0.6.2",
  "resvg",
+ "sha2",
  "swash",
  "wgpu",
 ]
