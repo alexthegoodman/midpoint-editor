@@ -56,6 +56,7 @@ pub fn dynamic_img(image_path: String, filename: String) -> impl IntoView {
                             s.width(120.0)
                                 .height(120.0)
                                 .background(Color::rgb(200.0, 200.0, 200.0))
+                                .border_radius(5.0)
                         }, // To see where it should be
                     )
                     .into_any()
