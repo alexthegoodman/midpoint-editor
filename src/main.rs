@@ -461,6 +461,7 @@ async fn main() {
     let state_2 = Arc::clone(&state_helper);
 
     let gpu_cloned = Arc::clone(&gpu_helper);
+    let gpu_cloned2 = Arc::clone(&gpu_helper);
 
     let viewport = Arc::new(Mutex::new(Viewport::new(
         window_size.width as f32,
@@ -902,7 +903,7 @@ async fn main() {
 
                 // editor.update_camera_binding(&gpu_resources.queue);
 
-                // gpu_clonsed2.lock().unwrap().gpu_resources = Some(Arc::clone(&gpu_resources));
+                gpu_cloned2.lock().unwrap().gpu_resources = Some(Arc::clone(&gpu_resources));
                 // editor.gpu_resources = Some(Arc::clone(&gpu_resources));
                 window_handle.gpu_resources = Some(gpu_resources);
                 window_handle.gpu_helper = Some(gpu_cloned);

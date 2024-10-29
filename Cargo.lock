@@ -1109,6 +1109,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "taffy",
+ "tokio",
  "unicode-segmentation",
  "uuid",
  "wasm-bindgen-futures",
@@ -2424,6 +2425,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "bytemuck",
+ "directories",
  "gloo-utils",
  "gltf",
  "image",

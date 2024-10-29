@@ -8,7 +8,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 bytemuck = "1.19.0"
 wgpu = "22.1.0"
-floem = { path = "D:/projects/common/common-floem" }
+floem = { path = "D:/projects/common/common-floem", features = ["tokio"] }
 floem_renderer = { path = "D:/projects/common/common-floem/renderer", version = "0.1.0" }
 crossbeam = "0.8.4"
 floem-winit = { git = "https://github.com/lapce/winit", rev = "c8d3b8fd6fa4ffd5e0f99be78aacddcf6de57bcd", features = ["rwh_05"] }
