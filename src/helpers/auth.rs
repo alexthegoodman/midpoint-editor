@@ -1,5 +1,7 @@
 use directories::ProjectDirs;
 
+use crate::helpers::utilities::get_common_os_dir;
+
 pub fn read_token(// state: tauri::State<'_, AppState>
 ) -> String {
     // let handle = &state.handle;
@@ -22,18 +24,21 @@ pub fn read_auth_token(// config: &Arc<tauri::Config>
     //     .expect("Failed to get AppData directory (3)")
     //     .join("com.common.commonosfiles");
 
-    if let Some(proj_dirs) = ProjectDirs::from("com", "common", "commonosfiles") {
-        // App data directory
-        let data_dir = proj_dirs.data_dir();
+    // if let Some(proj_dirs) = ProjectDirs::from("com", "common", "commonosfiles") {
+    // App data directory
+    // let data_dir = proj_dirs.data_dir();
 
-        let read_path = data_dir.join("auth");
+    // println!("data_dir {:?}", data_dir);
+    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+    let read_path = sync_dir.join("auth");
 
-        // pull String content from read_path
-        let auth_data =
-            String::from_utf8_lossy(&std::fs::read(read_path).unwrap_or_default()).to_string();
+    // pull String content from read_path
+    let auth_data =
+        String::from_utf8_lossy(&std::fs::read(read_path).unwrap_or_default()).to_string();
 
-        auth_data
-    } else {
-        "".to_string()
-    }
+    auth_data
+    // } else {
+    //     println!("Couldn't find CommonOS File Manager data directory");
+    //     "".to_string()
+    // }
 }

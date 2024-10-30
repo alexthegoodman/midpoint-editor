@@ -31,11 +31,15 @@ pub async fn generate_texture(
 
     let client = Client::new_with_headers(endpoint, headers);
 
+    println!("Making gql call...");
+
     let vars = Vars { prompt };
     let data = client
         .query_with_vars::<Data, Vars>(query, vars)
         .await
-        .unwrap();
+        .expect("Couldn't get generateTexture data");
+
+    println!("Gql call complete!");
 
     Ok(data)
 }

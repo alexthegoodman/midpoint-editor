@@ -5,3 +5,4 @@ pub mod models;
 pub mod projects;
 pub mod textures;
 pub mod utilities;
+pub mod websocket;

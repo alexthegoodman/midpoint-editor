@@ -5,7 +5,8 @@ use floem::keyboard::ModifiersState;
 use floem::reactive::{RwSignal, SignalUpdate};
 use midpoint_engine::core::RendererState::ObjectProperty;
 use midpoint_engine::core::RendererState::RendererState;
-use midpoint_engine::helpers::saved_data::SavedState;
+use midpoint_engine::helpers::saved_data::{File, LandscapeData, SavedState};
+use tokio::sync::mpsc::UnboundedSender;
 use undo::Edit;
 use undo::Record;
 use uuid::Uuid;
@@ -137,18 +138,49 @@ impl EditorState {
     }
 }
 
+pub struct NamedSignals {
+    pub texture_browser: Option<RwSignal<Vec<File>>>,
+    pub model_browser: Option<RwSignal<Vec<File>>>,
+    pub landscape_browser: Option<RwSignal<Vec<LandscapeData>>>,
+    pub concept_browser: Option<RwSignal<Vec<File>>>,
+}
+
 pub struct StateHelper {
     pub renderer_state: Option<Arc<Mutex<RendererState>>>,
     pub saved_state: Option<Arc<Mutex<SavedState>>>,
     pub project_selected_signal: Option<RwSignal<Uuid>>,
+    pub auth_token: String,
+    // pub simple_singals: Arc<Mutex<HashMap<String, RwSignal<String>>>>
+    // pub named_signals: Arc<Mutex<NamedSignals>>,
+    pub file_signals: Arc<Mutex<HashMap<String, Arc<UnboundedSender<UIMessage>>>>>,
+}
+
+#[derive(Clone, Debug)]
+pub enum UIMessage {
+    UpdateTextures(Vec<File>),
+    AddTexture(File),
+    // ... other UI updates
 }
 
 impl StateHelper {
-    pub fn new() -> Self {
+    pub fn new(auth_token: String) -> Self {
         Self {
             renderer_state: None,
             saved_state: None,
             project_selected_signal: None,
+            auth_token,
+            file_signals: Arc::new(Mutex::new(HashMap::new())), // named_signals: Arc::new(Mutex::new(NamedSignals {
+                                                                //     texture_browser: None,
+                                                                //     model_browser: None,
+                                                                //     landscape_browser: None,
+                                                                //     concept_browser: None,
+                                                                // })),
         }
+    }
+
+    // Helper method to register a new signal
+    pub fn register_file_signal(&mut self, name: String, signal: Arc<UnboundedSender<UIMessage>>) {
+        let mut signals = self.file_signals.lock().unwrap();
+        signals.insert(name, signal);
     }
 }

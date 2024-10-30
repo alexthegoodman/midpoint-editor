@@ -4,19 +4,23 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use bytemuck::Contiguous;
 use cgmath::Vector4;
-use editor_state::{EditorState, ObjectEdit, StateHelper};
+use editor_state::{EditorState, ObjectEdit, StateHelper, UIMessage};
 use floem::common::{nav_button, option_button, small_button};
 use floem::kurbo::Size;
 use floem::window::WindowConfig;
 use floem_renderer::gpu_resources::{self, GpuResources};
 use floem_winit::dpi::{LogicalSize, PhysicalSize};
 use floem_winit::event::{ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta};
+use helpers::auth::read_auth_token;
+use helpers::websocket::{Call, WebSocketManager};
 use midpoint_engine::core::RendererState::{Point, RendererState, WindowSize};
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::startup::{get_camera, handle_key_press, handle_mouse_move, Vertex};
 use uuid::Uuid;
 use views::app::app_view;
 // use winit::{event_loop, window};
+use floem::reactive::SignalGet;
+use floem::reactive::SignalUpdate;
 use wgpu::util::DeviceExt;
 
 use floem::context::PaintState;
@@ -440,6 +444,14 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
+    // Initialize logging
+    // tracing::fmt::init();
+
+    let auth_token = read_auth_token();
+
+    // TODO: show alert if auth_token is empty
+    println!("auth_token {:?}", auth_token);
+
     let app = Application::new();
 
     // Get the primary monitor's size
@@ -456,9 +468,11 @@ async fn main() {
     };
 
     let mut gpu_helper = Arc::new(Mutex::new(GpuHelper::new()));
-    let mut state_helper = Arc::new(Mutex::new(StateHelper::new()));
+    let mut state_helper = Arc::new(Mutex::new(StateHelper::new(auth_token)));
 
     let state_2 = Arc::clone(&state_helper);
+    let state_3 = Arc::clone(&state_helper);
+    let state_4 = Arc::clone(&state_helper);
 
     let gpu_cloned = Arc::clone(&gpu_helper);
     let gpu_cloned2 = Arc::clone(&gpu_helper);
@@ -472,17 +486,34 @@ async fn main() {
     let viewport_3 = Arc::clone(&viewport);
     let viewport_4 = Arc::clone(&viewport);
 
-    // let mut editor = Arc::new(Mutex::new(Editor::new(viewport.clone())));
-
-    // let cloned = Arc::clone(&editor);
-
     let record: Arc<Mutex<Record<ObjectEdit>>> = Arc::new(Mutex::new(Record::new()));
 
     let record_2 = Arc::clone(&record);
 
-    // let editor_state = Arc::new(Mutex::new(EditorState::new(cloned4, record)));
+    let mut manager = WebSocketManager::new();
 
-    // let state_2 = Arc::clone(&editor_state);
+    if let Err(e) = manager
+        .connect(state_3, {
+            let state_helper = state_4.clone();
+
+            move |signals_category, signal_name, signal_value| {
+                // main thread!? no.
+                println!(
+                    "Handling WebSocket message: {} {}",
+                    signals_category, signal_name
+                );
+            }
+        })
+        .await
+    {
+        eprintln!("Failed to connect: {:?}", e);
+        // return;
+    }
+
+    let manager = Arc::new(manager);
+
+    // // Disconnect when done
+    // manager.disconnect();
 
     let (mut app, window_id) = app.window(
         move |_| {
@@ -492,6 +523,7 @@ async fn main() {
                 Arc::clone(&state_helper),
                 Arc::clone(&gpu_helper),
                 Arc::clone(&viewport),
+                Arc::clone(&manager),
             )
         },
         Some(

@@ -4,7 +4,7 @@ use base64::decode;
 
 use super::utilities::get_common_os_dir;
 
-fn save_texture(projectId: String, textureBase64: String, textureFilename: String) -> String {
+pub fn save_texture(projectId: String, textureBase64: String, textureFilename: String) -> String {
     let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
 
     let textures_dir = sync_dir.join(format!("midpoint/projects/{}/textures", projectId));

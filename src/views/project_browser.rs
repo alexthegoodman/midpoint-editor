@@ -29,6 +29,7 @@ use floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
 use crate::helpers::projects::{get_projects, load_project_state, ProjectInfo};
+use crate::helpers::websocket::WebSocketManager;
 
 use super::shared::{test_image, test_static_image};
 
@@ -73,6 +74,7 @@ pub fn project_browser(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
+    manager: Arc<WebSocketManager>,
 ) -> impl View {
     // TODO: Start CommonOS File Manager to use Midpoint
     let projects = get_projects().expect("Couldn't get projects");
@@ -95,8 +97,12 @@ pub fn project_browser(
                     )
                     .on_click({
                         let state_helper = state_helper.clone();
+                        let manager = manager.clone();
 
                         move |_| {
+                            // join the WebSocket group for this project
+                            manager.join_group(); // locks and drops the state_helper
+
                             let mut state_helper = state_helper.lock().unwrap();
 
                             // retrieve saved state of project and set on helper

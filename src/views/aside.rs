@@ -24,6 +24,7 @@ use floem::IntoView;
 use floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
+use crate::helpers::websocket::WebSocketManager;
 
 use super::audio::audio_view;
 use super::concepts::concepts_view;
@@ -204,6 +205,7 @@ pub fn welcome_tab_interface(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
+    manager: Arc<WebSocketManager>,
 ) -> impl View {
     let state_2 = Arc::clone(&state_helper);
 
@@ -323,10 +325,13 @@ pub fn welcome_tab_interface(
             move || tabs.get(),
             |it| *it,
             move |it| match it {
-                "Projects" => {
-                    project_browser(state_2.clone(), gpu_helper.clone(), viewport.clone())
-                        .into_any()
-                }
+                "Projects" => project_browser(
+                    state_2.clone(),
+                    gpu_helper.clone(),
+                    viewport.clone(),
+                    manager.clone(),
+                )
+                .into_any(),
                 "Settings" => editor_settings(gpu_helper.clone(), viewport.clone()).into_any(),
                 _ => label(|| "Not implemented".to_owned()).into_any(),
             },

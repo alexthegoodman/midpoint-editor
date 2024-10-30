@@ -14,6 +14,7 @@ use floem::GpuHelper;
 use floem::IntoView;
 
 use crate::editor_state::StateHelper;
+use crate::helpers::websocket::WebSocketManager;
 
 use super::aside::project_tab_interface;
 use super::aside::welcome_tab_interface;
@@ -54,11 +55,13 @@ pub fn selection_view(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: std::sync::Arc<Mutex<Viewport>>,
+    manager: Arc<WebSocketManager>,
 ) -> impl IntoView {
     container((welcome_tab_interface(
         state_helper.clone(),
         gpu_helper.clone(),
         viewport.clone(),
+        manager.clone(),
     ),))
 }
 
@@ -66,6 +69,7 @@ pub fn app_view(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: std::sync::Arc<Mutex<Viewport>>,
+    manager: Arc<WebSocketManager>,
 ) -> impl IntoView {
     let project_selected = create_rw_signal(Uuid::nil());
 
@@ -82,8 +86,13 @@ pub fn app_view(
             if project_selected_real != Uuid::nil() {
                 project_view(state_helper.clone(), gpu_helper.clone(), viewport.clone()).into_any()
             } else {
-                selection_view(state_helper.clone(), gpu_helper.clone(), viewport.clone())
-                    .into_any()
+                selection_view(
+                    state_helper.clone(),
+                    gpu_helper.clone(),
+                    viewport.clone(),
+                    manager.clone(),
+                )
+                .into_any()
             }
         },
     )

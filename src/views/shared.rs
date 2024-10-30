@@ -19,7 +19,7 @@ use std::rc::Rc;
 use crate::helpers::utilities::get_common_os_dir;
 
 pub fn dynamic_img(image_path: String, filename: String) -> impl IntoView {
-    let image_signal: RwSignal<Option<Rc<DynamicImage>>> = create_rw_signal(None);
+    let image_signal: RwSignal<Option<Rc<DynamicImage>>> = create_rw_signal(None); // fix?
 
     create_effect(move |_| {
         let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
