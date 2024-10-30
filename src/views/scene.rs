@@ -5,8 +5,9 @@ use floem::event::{Event, EventListener, EventPropagation};
 use floem::keyboard::{Key, NamedKey};
 use floem::peniko::Color;
 use floem::reactive::create_signal;
+use floem::views::dropdown::dropdown;
 use floem::views::{
-    container, dyn_container, empty, label, scroll, stack, tab, v_stack, virtual_stack,
+    container, dyn_container, empty, label, scroll, stack, tab, text, v_stack, virtual_stack,
     VirtualDirection,
 };
 use midpoint_engine::core::Viewport::Viewport;
@@ -25,6 +26,24 @@ use super::landscape_browser::landscape_browser;
 use super::model_browser::model_browser;
 use super::texture_browser::texture_browser;
 
+// Define an enum for our dropdown options
+// #[derive(Clone, PartialEq, Debug)]
+// enum DropdownOption2 {
+//     Option1,
+//     Option2,
+//     Option3,
+// }
+
+// impl std::fmt::Display for DropdownOption2 {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             DropdownOption2::Option1 => write!(f, "Option 1"),
+//             DropdownOption2::Option2 => write!(f, "Option 2"),
+//             DropdownOption2::Option3 => write!(f, "Option 3"),
+//         }
+//     }
+// }
+
 pub fn scene_view(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
@@ -37,6 +56,7 @@ pub fn scene_view(
         .collect();
     let (tabs, _set_tabs) = create_signal(tabs);
     let (active_tab, set_active_tab) = create_signal(0);
+    // let (selected_option, set_selected_option) = create_signal(DropdownOption2::Option1);
 
     let list = scroll({
         virtual_stack(
@@ -126,6 +146,32 @@ pub fn scene_view(
         (label(|| "Scene"),),
         v_stack((
             list, // tab list
+            // dropdown(
+            //     // Active item (currently selected option)
+            //     move || {
+            //         let see = selected_option.get();
+            //         println!("see {:?}", see);
+            //         see
+            //     },
+            //     // Main view (what's always visible)
+            //     |option: DropdownOption2| Box::new(label(move || format!("Selected: {}", option))),
+            //     // Iterator of all options
+            //     vec![
+            //         DropdownOption2::Option1,
+            //         DropdownOption2::Option2,
+            //         DropdownOption2::Option3,
+            //     ],
+            //     // List item view (how each option in the dropdown is displayed)
+            //     // move |option: DropdownOption| {
+            //     //     let option_clone = option.clone();
+            //     //     Box::new(button(option.to_string()).action(move || {
+            //     //         println!("DropdownOption {:?}", option_clone.clone());
+            //     //         set_selected_option.set(option_clone.clone());
+            //     //     }))
+            //     // },
+            //     move |m| text(m.to_string()).into_any(),
+            // )
+            // .on_accept(move |new| set_selected_option.set(new)),
             tab(
                 // active tab
                 move || active_tab.get(),

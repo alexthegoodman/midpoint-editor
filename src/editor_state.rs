@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use floem::keyboard::ModifiersState;
 use floem::reactive::{RwSignal, SignalUpdate};
-use midpoint_engine::core::RendererState::ObjectProperty;
 use midpoint_engine::core::RendererState::RendererState;
+use midpoint_engine::core::RendererState::{ObjectConfig, ObjectProperty};
 use midpoint_engine::helpers::saved_data::{File, LandscapeData, SavedState};
 use tokio::sync::mpsc::UnboundedSender;
 use undo::Edit;
@@ -153,6 +153,9 @@ pub struct StateHelper {
     // pub simple_singals: Arc<Mutex<HashMap<String, RwSignal<String>>>>
     // pub named_signals: Arc<Mutex<NamedSignals>>,
     pub file_signals: Arc<Mutex<HashMap<String, Arc<UnboundedSender<UIMessage>>>>>,
+    pub object_selected_signal: Option<RwSignal<bool>>,
+    pub selected_object_id_signal: Option<RwSignal<Uuid>>,
+    pub selected_object_data_signal: Option<RwSignal<ObjectConfig>>,
 }
 
 #[derive(Clone, Debug)]
@@ -169,12 +172,10 @@ impl StateHelper {
             saved_state: None,
             project_selected_signal: None,
             auth_token,
-            file_signals: Arc::new(Mutex::new(HashMap::new())), // named_signals: Arc::new(Mutex::new(NamedSignals {
-                                                                //     texture_browser: None,
-                                                                //     model_browser: None,
-                                                                //     landscape_browser: None,
-                                                                //     concept_browser: None,
-                                                                // })),
+            file_signals: Arc::new(Mutex::new(HashMap::new())),
+            object_selected_signal: None,
+            selected_object_id_signal: None,
+            selected_object_data_signal: None,
         }
     }
 

@@ -1,11 +1,12 @@
 use std::{fs, path::Path};
 
 use base64::decode;
+use midpoint_engine::helpers::saved_data::{LandscapeTextureKinds, LevelData};
 use uuid::Uuid;
 
 use super::utilities::get_common_os_dir;
 
-fn save_landscape(
+pub fn save_landscape(
     // state: tauri::State<'_, AppState>,
     projectId: String,
     landscapeBase64: String,
@@ -79,4 +80,39 @@ fn save_landscape(
         .expect("Couldn't save soil file");
 
     "success".to_string()
+}
+
+pub fn save_landscape_texture(
+    levels: Option<Vec<LevelData>>,
+    component_id: String,
+    texture_kind: LandscapeTextureKinds,
+    value: String,
+) {
+    let mut new_levels = levels.clone().unwrap_or_default();
+    if let Some(level) = new_levels.last_mut() {
+        if let Some(components) = &mut level.components {
+            if let Some(component) = components.iter_mut().find(|c| c.id == component_id) {
+                if let Some(landscape_properties) = &mut component.landscape_properties {
+                    match texture_kind {
+                        LandscapeTextureKinds::Primary => {
+                            landscape_properties.primary_texture_id = Some(value)
+                        }
+                        LandscapeTextureKinds::Rockmap => {
+                            landscape_properties.rockmap_texture_id = Some(value)
+                        }
+                        LandscapeTextureKinds::Soil => {
+                            landscape_properties.soil_texture_id = Some(value)
+                        }
+                        _ => {
+                            // web_sys::console::error_1(
+                            //     &format!("Invalid texture kind: {}", value).into(),
+                            // );
+                            println!("Invalid TextureKind");
+                            // return;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

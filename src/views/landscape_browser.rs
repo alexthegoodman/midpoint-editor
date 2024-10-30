@@ -7,8 +7,14 @@ use floem::reactive::{create_effect, create_rw_signal, RwSignal, SignalUpdate};
 use floem::taffy::{FlexDirection, FlexWrap};
 use floem::views::{container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
 use floem::IntoView;
+use floem_renderer::gpu_resources;
+use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
-use midpoint_engine::helpers::saved_data::{File, LandscapeData};
+use midpoint_engine::helpers::saved_data::{
+    ComponentData, ComponentKind, File, GenericProperties, LandscapeData, LandscapeProperties,
+};
+use midpoint_engine::startup::handle_add_landscape;
+use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
 use floem::views::Decorators;
@@ -16,8 +22,13 @@ use floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::{EditorState, StateHelper};
 
-pub fn landscape_item(landscape: LandscapeData) -> impl View {
+pub fn landscape_item(
+    state_helper: Arc<Mutex<StateHelper>>,
+    gpu_helper: Arc<Mutex<GpuHelper>>,
+    landscape: LandscapeData,
+) -> impl View {
     let active = create_rw_signal(false);
+    let disabled = create_rw_signal(false);
 
     let heightmap_filename = landscape
         .heightmap
@@ -58,12 +69,127 @@ pub fn landscape_item(landscape: LandscapeData) -> impl View {
             "Add to Scene",
             "plus",
             {
+                let state_helper = state_helper.clone();
+                // let heightmap_filename = heightmap_filename.clone();
+                let heightmap_filename = landscape
+                    .heightmap
+                    .as_ref()
+                    .expect("Couldn't get heightmap")
+                    .fileName
+                    .clone();
+
                 move |_| {
-                    // add to scene
+                    let mut state_helper = state_helper.lock().unwrap();
+                    let disabled = disabled.clone();
+
+                    println!("Prearting to landscape add to scene...");
+
+                    disabled.set(true);
+
+                    let landscapeComponentId = Uuid::new_v4();
+
+                    // Get the data you need before spawning
+                    let mut saved_state = state_helper
+                        .saved_state
+                        .as_mut()
+                        .expect("Couldn't get RendererState")
+                        .lock()
+                        .unwrap();
+
+                    // add to `levels.components` in SavedContext
+                    let landscape_component = ComponentData {
+                        id: landscapeComponentId.to_string().clone(),
+                        kind: Some(ComponentKind::Landscape),
+                        asset_id: landscape.id.clone(),
+                        generic_properties: GenericProperties {
+                            name: "New Landscape Component".to_string(),
+                        },
+                        landscape_properties: Some(LandscapeProperties {
+                            // these are the visible texture ids, not the map ids, so are added after adding
+                            primary_texture_id: None,
+                            rockmap_texture_id: None,
+                            soil_texture_id: None,
+                        }),
+                        model_properties: None,
+                    };
+                    let mut levels = saved_state.levels.as_mut().expect("Couldn't get levels");
+                    levels
+                        .get_mut(0)
+                        .expect("Couldn't get first level")
+                        .components
+                        .get_or_insert_with(Vec::new)
+                        .push(landscape_component);
+
+                    drop(saved_state);
+
+                    let mut renderer_state = state_helper
+                        .renderer_state
+                        .as_mut()
+                        .expect("Couldn't get RendererState")
+                        .lock()
+                        .unwrap();
+
+                    // update selected_component_id in renderer state
+                    renderer_state.object_selected = Some(landscapeComponentId);
+
+                    // actually render the landscape in wgpu
+                    let gpu_helper = gpu_helper.lock().unwrap();
+                    let gpu_resources = gpu_helper
+                        .gpu_resources
+                        .as_ref()
+                        .expect("Couldn't get gpu resources");
+
+                    let proejct_selected = renderer_state
+                        .project_selected
+                        .as_ref()
+                        .expect("Couldn't get selected project")
+                        .to_string();
+
+                    drop(renderer_state);
+
+                    println!("Loading landscape to scene...");
+
+                    handle_add_landscape(
+                        state_helper
+                            .renderer_state
+                            .as_ref()
+                            .expect("Couldn't get RendererState")
+                            .clone(),
+                        &gpu_resources.device,
+                        &gpu_resources.queue,
+                        proejct_selected,
+                        landscape.id.clone(),
+                        landscapeComponentId.to_string().clone(),
+                        heightmap_filename.clone(),
+                        // js_callback,
+                    );
+
+                    // update selected_component_id in signal
+                    let object_selected_signal = state_helper
+                        .object_selected_signal
+                        .expect("Couldn't get signal");
+                    object_selected_signal.set(true);
+                    let selected_object_id_signal = state_helper
+                        .selected_object_id_signal
+                        .expect("Couldn't get signal");
+                    selected_object_id_signal.set(landscapeComponentId);
+                    let selected_object_data_signal = state_helper
+                        .selected_object_data_signal
+                        .expect("Couldn't get signal");
+                    selected_object_data_signal.set(ObjectConfig {
+                        id: landscapeComponentId,
+                        name: "New Landscape".to_string(),
+                        position: (0.0, 0.0, 0.0),
+                    });
+
+                    println!("Landscape added!");
+
+                    disabled.set(false);
                 }
             },
             active,
-        ),
+        )
+        .disabled(move || disabled.get()),
     ))
     .style(|s| s.width(120.0))
 }
@@ -74,6 +200,8 @@ pub fn landscape_browser(
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
     let landscape_data: RwSignal<Vec<LandscapeData>> = create_rw_signal(Vec::new());
+
+    let state_2 = Arc::clone(&state_helper);
 
     create_effect(move |_| {
         let state_helper = state_helper.lock().unwrap();
@@ -98,7 +226,9 @@ pub fn landscape_browser(
             dyn_stack(
                 move || landscape_data.get(),
                 move |landscape_data| landscape_data.id.clone(),
-                move |landscape_data| landscape_item(landscape_data),
+                move |landscape_data| {
+                    landscape_item(state_2.clone(), gpu_helper.clone(), landscape_data)
+                },
             )
             .into_view(),
         ),))

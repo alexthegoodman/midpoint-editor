@@ -44,6 +44,7 @@ pub fn project_tab_interface(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
+    object_selected: RwSignal<bool>,
 ) -> impl View {
     // let editor_cloned = Arc::clone(&editor);
 
@@ -179,24 +180,47 @@ pub fn project_tab_interface(
 
     container((
         list,
-        tab(
-            move || active_tab.get(),
-            move || tabs.get(),
-            |it| *it,
-            move |it| match it {
-                "Concepts" => concepts_view(gpu_helper.clone(), viewport.clone()).into_any(),
-                "Scene" => {
-                    scene_view(state_2.clone(), gpu_helper.clone(), viewport.clone()).into_any()
+        dyn_container(
+            move || !object_selected.get(),
+            move |show_content| {
+                let state_2 = state_2.clone();
+                // let editor_cloned = editor_cloned.clone();
+                let viewport = viewport.clone();
+                let gpu_helper = gpu_helper.clone();
+                // let handler = handler.clone();
+                // let square_handler = square_handler.clone();
+                if show_content {
+                    tab(
+                        move || active_tab.get(),
+                        move || tabs.get(),
+                        |it| *it,
+                        move |it| match it {
+                            "Concepts" => {
+                                concepts_view(gpu_helper.clone(), viewport.clone()).into_any()
+                            }
+                            "Scene" => {
+                                scene_view(state_2.clone(), gpu_helper.clone(), viewport.clone())
+                                    .into_any()
+                            }
+                            "Map" => maps_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                            "Story" => story_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                            "Audio" => audio_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                            "Performance" => {
+                                performance_view(gpu_helper.clone(), viewport.clone()).into_any()
+                            }
+                            "Settings" => {
+                                project_settings(gpu_helper.clone(), viewport.clone()).into_any()
+                            }
+                            _ => label(|| "Not implemented".to_owned()).into_any(),
+                        },
+                    )
+                    .style(|s| s.flex_col().items_start().margin_top(20.0))
+                    .into_any()
+                } else {
+                    empty().into_any()
                 }
-                "Map" => maps_view(gpu_helper.clone(), viewport.clone()).into_any(),
-                "Story" => story_view(gpu_helper.clone(), viewport.clone()).into_any(),
-                "Audio" => audio_view(gpu_helper.clone(), viewport.clone()).into_any(),
-                "Performance" => performance_view(gpu_helper.clone(), viewport.clone()).into_any(),
-                "Settings" => project_settings(gpu_helper.clone(), viewport.clone()).into_any(),
-                _ => label(|| "Not implemented".to_owned()).into_any(),
             },
-        )
-        .style(|s| s.flex_col().items_start().margin_top(20.0)),
+        ),
     ))
     .style(|s| s.flex_col().width_full().height_full())
 }

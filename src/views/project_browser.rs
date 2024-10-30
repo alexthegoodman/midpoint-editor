@@ -31,8 +31,6 @@ use crate::editor_state::StateHelper;
 use crate::helpers::projects::{get_projects, load_project_state, ProjectInfo};
 use crate::helpers::websocket::WebSocketManager;
 
-use super::shared::{test_image, test_static_image};
-
 pub fn project_item(
     project_info: ProjectInfo,
     sortable_items: RwSignal<Vec<ProjectInfo>>,

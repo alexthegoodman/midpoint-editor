@@ -67,25 +67,25 @@ pub fn dynamic_img(image_path: String, filename: String) -> impl IntoView {
     )
 }
 
-pub fn test_image() -> impl IntoView {
-    // Create a simple test image
-    let mut img = image::RgbaImage::new(100, 100);
-    // Fill with a red color
-    for pixel in img.pixels_mut() {
-        *pixel = image::Rgba([255, 0, 0, 255]);
-    }
-    let dynamic_img = DynamicImage::ImageRgba8(img);
+// pub fn test_image() -> impl IntoView {
+//     // Create a simple test image
+//     let mut img = image::RgbaImage::new(100, 100);
+//     // Fill with a red color
+//     for pixel in img.pixels_mut() {
+//         *pixel = image::Rgba([255, 0, 0, 255]);
+//     }
+//     let dynamic_img = DynamicImage::ImageRgba8(img);
 
-    println!("Created test image");
+//     println!("Created test image");
 
-    img_dynamic(move || Some(Rc::new(dynamic_img.clone()))).style(|s| {
-        s.width(100)
-            .height(100)
-            .border(1)
-            .border_color(Color::rgb(255.0, 0.0, 0.0))
-            .background(Color::rgb(200.0, 200.0, 200.0))
-    })
-}
+//     img_dynamic(move || Some(Rc::new(dynamic_img.clone()))).style(|s| {
+//         s.width(100)
+//             .height(100)
+//             .border(1)
+//             .border_color(Color::rgb(255.0, 0.0, 0.0))
+//             .background(Color::rgb(200.0, 200.0, 200.0))
+//     })
+// }
 
 // // Let's also add a test with a known working image
 // pub fn test_static_image() -> impl IntoView {
@@ -106,20 +106,20 @@ pub fn test_image() -> impl IntoView {
 //     })
 // }
 
-pub fn test_static_image() -> impl IntoView {
-    // Create a 100x100 red image
-    let mut img = image::RgbaImage::new(100, 100);
-    for pixel in img.pixels_mut() {
-        *pixel = image::Rgba([255, 0, 0, 255]);
-    }
-    let dynamic_img = image::DynamicImage::ImageRgba8(img);
-    println!("Created test image: {:?}", dynamic_img.dimensions());
+// pub fn test_static_image() -> impl IntoView {
+//     // Create a 100x100 red image
+//     let mut img = image::RgbaImage::new(100, 100);
+//     for pixel in img.pixels_mut() {
+//         *pixel = image::Rgba([255, 0, 0, 255]);
+//     }
+//     let dynamic_img = image::DynamicImage::ImageRgba8(img);
+//     println!("Created test image: {:?}", dynamic_img.dimensions());
 
-    img_dynamic(move || Some(Rc::new(dynamic_img.clone()))).style(|s| {
-        s.width(100)
-            .height(100)
-            .border(1)
-            .border_color(Color::rgb(255.0, 0.0, 0.0))
-            .background(Color::rgb(200.0, 200.0, 200.0))
-    })
-}
+//     img_dynamic(move || Some(Rc::new(dynamic_img.clone()))).style(|s| {
+//         s.width(100)
+//             .height(100)
+//             .border(1)
+//             .border_color(Color::rgb(255.0, 0.0, 0.0))
+//             .background(Color::rgb(200.0, 200.0, 200.0))
+//     })
+// }
