@@ -7,44 +7,44 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use bytemuck::Contiguous;
-use floem::common::input_styles;
-use floem::event::{Event, EventListener, EventPropagation};
-use floem::keyboard::{Key, KeyCode, NamedKey};
-use floem::kurbo::Size;
-use floem::peniko::Color;
-use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
-use floem::style::{Background, CursorStyle, Style, Transition};
-use floem::taffy::{AlignItems, Position};
-use floem::text::Weight;
-use floem::views::dropdown::dropdown;
-use floem::views::editor::view;
-use floem::views::{
+use midpoint_engine::floem::common::input_styles;
+use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
+use midpoint_engine::floem::keyboard::{Key, KeyCode, NamedKey};
+use midpoint_engine::floem::kurbo::Size;
+use midpoint_engine::floem::peniko::Color;
+use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use midpoint_engine::floem::style::{Background, CursorStyle, Style, Transition};
+use midpoint_engine::floem::taffy::{AlignItems, Position};
+use midpoint_engine::floem::text::Weight;
+use midpoint_engine::floem::views::dropdown::dropdown;
+use midpoint_engine::floem::views::editor::view;
+use midpoint_engine::floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
 };
-use floem::window::WindowConfig;
-use floem_renderer::gpu_resources::{self, GpuResources};
-use floem_winit::dpi::{LogicalSize, PhysicalSize};
-use floem_winit::event::{ElementState, MouseButton};
+use midpoint_engine::floem::window::WindowConfig;
+use midpoint_engine::floem_renderer::gpu_resources::{self, GpuResources};
+use midpoint_engine::floem_winit::dpi::{LogicalSize, PhysicalSize};
+use midpoint_engine::floem_winit::event::{ElementState, MouseButton};
 use uuid::Uuid;
 // use views::buttons::{nav_button, option_button, small_button};
 // use winit::{event_loop, window};
 use wgpu::util::DeviceExt;
 
-use floem::context::PaintState;
-// use floem::floem_reactive::SignalGet;
-use floem::reactive::{SignalGet, SignalUpdate};
-use floem::views::text;
-use floem::views::Decorators;
-use floem::views::{h_stack, svg, v_stack};
-use floem::{
+use midpoint_engine::floem::context::PaintState;
+// use midpoint_engine::floem::floem_reactive::SignalGet;
+use midpoint_engine::floem::reactive::{SignalGet, SignalUpdate};
+use midpoint_engine::floem::views::text;
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::views::{h_stack, svg, v_stack};
+use midpoint_engine::floem::{
     views::{button, dropdown},
     IntoView,
 };
-use floem::{Application, CustomRenderCallback};
-use floem::{GpuHelper, View, WindowHandle};
+use midpoint_engine::floem::{Application, CustomRenderCallback};
+use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
-use floem::unit::{Auto, DurationUnitExt, Pct, UnitExt};
+use midpoint_engine::floem::unit::{Auto, DurationUnitExt, Pct, UnitExt};
 use std::time::Duration;
 
 use crate::editor_state::{EditorState, StateHelper};

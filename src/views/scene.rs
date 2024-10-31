@@ -1,24 +1,24 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use floem::common::{card_styles, tab_button};
-use floem::event::{Event, EventListener, EventPropagation};
-use floem::keyboard::{Key, NamedKey};
-use floem::peniko::Color;
-use floem::reactive::create_signal;
-use floem::views::dropdown::dropdown;
-use floem::views::{
+use midpoint_engine::floem::common::{card_styles, tab_button};
+use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
+use midpoint_engine::floem::keyboard::{Key, NamedKey};
+use midpoint_engine::floem::peniko::Color;
+use midpoint_engine::floem::reactive::create_signal;
+use midpoint_engine::floem::views::dropdown::dropdown;
+use midpoint_engine::floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text, v_stack, virtual_stack,
     VirtualDirection,
 };
 use midpoint_engine::core::Viewport::Viewport;
 use wgpu::util::DeviceExt;
 
-use floem::reactive::SignalGet;
-use floem::reactive::SignalUpdate;
-use floem::views::Decorators;
-use floem::views::VirtualItemSize;
-use floem::IntoView;
-use floem::{GpuHelper, View, WindowHandle};
+use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::reactive::SignalUpdate;
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::views::VirtualItemSize;
+use midpoint_engine::floem::IntoView;
+use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
 

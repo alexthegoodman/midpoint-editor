@@ -1,8 +1,8 @@
-use floem::common::card_styles;
-use floem::common::small_button;
-use floem::views::dropdown::dropdown;
-use floem::views::text;
-use floem_renderer::gpu_resources;
+use midpoint_engine::floem::common::card_styles;
+use midpoint_engine::floem::common::small_button;
+use midpoint_engine::floem::views::dropdown::dropdown;
+use midpoint_engine::floem::views::text;
+use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::helpers::saved_data::File;
@@ -13,15 +13,15 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
-use floem::peniko::{Brush, Color};
-use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
-use floem::reactive::{SignalGet, SignalUpdate};
-use floem::text::Weight;
-use floem::views::Decorators;
-use floem::views::{container, dyn_container, empty, label};
-use floem::views::{h_stack, v_stack};
-use floem::GpuHelper;
-use floem::IntoView;
+use midpoint_engine::floem::peniko::{Brush, Color};
+use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use midpoint_engine::floem::reactive::{SignalGet, SignalUpdate};
+use midpoint_engine::floem::text::Weight;
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::views::{container, dyn_container, empty, label};
+use midpoint_engine::floem::views::{h_stack, v_stack};
+use midpoint_engine::floem::GpuHelper;
+use midpoint_engine::floem::IntoView;
 
 use crate::editor_state::EditorState;
 use crate::editor_state::StateHelper;

@@ -3,20 +3,20 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
-use floem::common::small_button;
-use floem::reactive::SignalGet;
-use floem::reactive::{create_effect, create_rw_signal, RwSignal, SignalUpdate};
-use floem::taffy::{FlexDirection, FlexWrap};
-use floem::views::{button, container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
-use floem::IntoView;
-use floem_renderer::gpu_resources;
+use midpoint_engine::floem::common::small_button;
+use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, RwSignal, SignalUpdate};
+use midpoint_engine::floem::taffy::{FlexDirection, FlexWrap};
+use midpoint_engine::floem::views::{button, container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
+use midpoint_engine::floem::IntoView;
+use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::helpers::saved_data::File;
 use midpoint_engine::startup::handle_add_model;
 use wgpu::util::DeviceExt;
 
-use floem::views::Decorators;
-use floem::{GpuHelper, View, WindowHandle};
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::{EditorState, StateHelper};
 

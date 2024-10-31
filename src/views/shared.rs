@@ -1,13 +1,13 @@
-use floem::peniko::Color;
-use floem::reactive::create_effect;
-use floem::reactive::SignalGet;
-use floem::reactive::SignalUpdate;
-use floem::views::dyn_container;
-use floem::views::empty;
-use floem::views::img;
-use floem::views::img_dynamic; // Note: using img_dynamic instead of img
-use floem::views::Decorators;
-use floem::{
+use midpoint_engine::floem::peniko::Color;
+use midpoint_engine::floem::reactive::create_effect;
+use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::reactive::SignalUpdate;
+use midpoint_engine::floem::views::dyn_container;
+use midpoint_engine::floem::views::empty;
+use midpoint_engine::floem::views::img;
+use midpoint_engine::floem::views::img_dynamic; // Note: using img_dynamic instead of img
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::{
     reactive::{create_rw_signal, RwSignal},
     IntoView,
 };

@@ -5,27 +5,29 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use bytemuck::Contiguous;
 use cgmath::Vector4;
 use editor_state::{EditorState, ObjectEdit, StateHelper, UIMessage};
-use floem::common::{nav_button, option_button, small_button};
-use floem::kurbo::Size;
-use floem::window::WindowConfig;
-use floem_renderer::gpu_resources::{self, GpuResources};
-use floem_winit::dpi::{LogicalSize, PhysicalSize};
-use floem_winit::event::{ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta};
 use helpers::auth::read_auth_token;
 use helpers::websocket::{Call, WebSocketManager};
 use midpoint_engine::core::RendererState::{Point, RendererState, WindowSize};
 use midpoint_engine::core::Viewport::Viewport;
+use midpoint_engine::floem::common::{nav_button, option_button, small_button};
+use midpoint_engine::floem::kurbo::Size;
+use midpoint_engine::floem::window::WindowConfig;
+use midpoint_engine::floem_renderer::gpu_resources::{self, GpuResources};
+use midpoint_engine::floem_winit::dpi::{LogicalSize, PhysicalSize};
+use midpoint_engine::floem_winit::event::{
+    ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta,
+};
 use midpoint_engine::startup::{get_camera, handle_key_press, handle_mouse_move, Vertex};
 use uuid::Uuid;
 use views::app::app_view;
 // use winit::{event_loop, window};
-use floem::reactive::SignalGet;
-use floem::reactive::SignalUpdate;
+use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::reactive::SignalUpdate;
 use wgpu::util::DeviceExt;
 
-use floem::context::PaintState;
-use floem::{Application, CustomRenderCallback};
-use floem::{GpuHelper, View, WindowHandle};
+use midpoint_engine::floem::context::PaintState;
+use midpoint_engine::floem::{Application, CustomRenderCallback};
+use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 use undo::{Edit, Record};
 
 pub mod editor_state;
@@ -424,8 +426,8 @@ fn handle_modifiers_changed(
     }))
 }
 
-use floem_winit::keyboard::NamedKey;
-use floem_winit::keyboard::{Key, SmolStr};
+use midpoint_engine::floem_winit::keyboard::NamedKey;
+use midpoint_engine::floem_winit::keyboard::{Key, SmolStr};
 
 fn handle_keyboard_input(
     editor_state: Arc<Mutex<EditorState>>,

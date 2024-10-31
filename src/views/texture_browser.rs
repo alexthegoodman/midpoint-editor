@@ -1,24 +1,24 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
-use floem::common::small_button;
-use floem::ext_event::create_signal_from_tokio_channel;
-use floem::reactive::SignalGet;
-use floem::reactive::SignalUpdate;
-use floem::reactive::{create_effect, create_rw_signal, RwSignal};
-use floem::taffy::{FlexDirection, FlexWrap};
-use floem::views::h_stack;
-use floem::views::text_input;
-use floem::views::{container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
-use floem::IntoView;
+use midpoint_engine::floem::common::small_button;
+use midpoint_engine::floem::ext_event::create_signal_from_tokio_channel;
+use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::reactive::SignalUpdate;
+use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, RwSignal};
+use midpoint_engine::floem::taffy::{FlexDirection, FlexWrap};
+use midpoint_engine::floem::views::h_stack;
+use midpoint_engine::floem::views::text_input;
+use midpoint_engine::floem::views::{container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
+use midpoint_engine::floem::IntoView;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::helpers::saved_data::File;
 use tokio::spawn;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
-use floem::views::Decorators;
-use floem::{GpuHelper, View, WindowHandle};
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::UIMessage;
 use crate::editor_state::{EditorState, StateHelper};

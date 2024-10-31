@@ -1,7 +1,7 @@
-use floem::reactive::create_effect;
-use floem::reactive::create_rw_signal;
-use floem::reactive::SignalGet;
-use floem::views::{
+use midpoint_engine::floem::reactive::create_effect;
+use midpoint_engine::floem::reactive::create_rw_signal;
+use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
 };
@@ -11,8 +11,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
-use floem::GpuHelper;
-use floem::IntoView;
+use midpoint_engine::floem::GpuHelper;
+use midpoint_engine::floem::IntoView;
 
 use crate::editor_state::StateHelper;
 use crate::helpers::websocket::WebSocketManager;

@@ -1,15 +1,15 @@
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use floem::common::{card_styles, create_icon, nav_button};
-use floem::event::{Event, EventListener, EventPropagation};
-use floem::keyboard::{Key, KeyCode, NamedKey};
-use floem::peniko::Color;
-use floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
-use floem::style::CursorStyle;
-use floem::taffy::AlignItems;
-use floem::text::Weight;
-use floem::views::{
+use midpoint_engine::floem::common::{card_styles, create_icon, nav_button};
+use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
+use midpoint_engine::floem::keyboard::{Key, KeyCode, NamedKey};
+use midpoint_engine::floem::peniko::Color;
+use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use midpoint_engine::floem::style::CursorStyle;
+use midpoint_engine::floem::taffy::AlignItems;
+use midpoint_engine::floem::text::Weight;
+use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, h_stack, img, label, scroll, stack, svg, tab,
     text_input, v_stack, virtual_list, virtual_stack, VirtualDirection, VirtualItemSize,
 };
@@ -19,13 +19,13 @@ use uuid::Uuid;
 // use winit::{event_loop, window};
 use wgpu::util::DeviceExt;
 
-use floem::context::PaintState;
-// use floem::floem_reactive::SignalGet;
-use floem::reactive::{SignalGet, SignalUpdate};
-use floem::views::text;
-use floem::views::Decorators;
-use floem::IntoView;
-use floem::{GpuHelper, View, WindowHandle};
+use midpoint_engine::floem::context::PaintState;
+// use midpoint_engine::floem::floem_reactive::SignalGet;
+use midpoint_engine::floem::reactive::{SignalGet, SignalUpdate};
+use midpoint_engine::floem::views::text;
+use midpoint_engine::floem::views::Decorators;
+use midpoint_engine::floem::IntoView;
+use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
 use crate::helpers::projects::{get_projects, load_project_state, ProjectInfo};
