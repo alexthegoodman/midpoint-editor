@@ -17,7 +17,7 @@ use midpoint_engine::floem_winit::dpi::{LogicalSize, PhysicalSize};
 use midpoint_engine::floem_winit::event::{
     ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta,
 };
-use midpoint_engine::startup::{get_camera, handle_key_press, handle_mouse_move, Vertex};
+use midpoint_engine::handlers::{get_camera, handle_key_press, handle_mouse_move, Vertex};
 use uuid::Uuid;
 use views::app::app_view;
 // use winit::{event_loop, window};
