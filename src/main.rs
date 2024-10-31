@@ -41,6 +41,15 @@ type RenderCallback<'a> = dyn for<'b> Fn(
         &WindowHandle,
     ) + 'a;
 
+pub fn get_engine_editor(handle: &WindowHandle) -> Option<Arc<Mutex<RendererState>>> {
+    handle.user_editor.as_ref().and_then(|e| {
+        // let guard = e.lock().ok()?;
+        let cloned = e.downcast_ref::<Arc<Mutex<RendererState>>>().cloned();
+        // drop(guard);
+        cloned
+    })
+}
+
 fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
     Box::new(
         move |mut encoder: wgpu::CommandEncoder,
@@ -50,8 +59,14 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
               window_handle: &WindowHandle| {
             let mut handle = window_handle.borrow();
 
-            let engine = handle
-                .user_engine
+            // let engine = handle
+            //     .user_engine
+            //     .as_ref()
+            //     .expect("Couldn't get user engine")
+            //     .lock()
+            //     .unwrap();
+            let editor = get_engine_editor(handle);
+            let engine = editor
                 .as_ref()
                 .expect("Couldn't get user engine")
                 .lock()
@@ -912,7 +927,9 @@ async fn main() {
 
                 let editor_state = Arc::new(Mutex::new(EditorState::new(renderer_state, record)));
 
-                window_handle.user_engine = Some(renderer_state_2);
+                // window_handle.user_engine = Some(renderer_state_2);
+                // window_handle.set_editor(renderer_state_2);
+                window_handle.user_editor = Some(Box::new(renderer_state_2));
 
                 window_handle.handle_cursor_moved = handle_cursor_moved(
                     editor_state.clone(),
