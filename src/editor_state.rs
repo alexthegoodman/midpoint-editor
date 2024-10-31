@@ -51,6 +51,13 @@ impl Edit for ObjectEdit {
     }
 }
 
+pub struct MouseState {
+    pub is_first_mouse: bool,
+    pub last_mouse_x: f64,
+    pub last_mouse_y: f64,
+    pub right_mouse_pressed: bool,
+}
+
 pub struct EditorState {
     pub renderer_state: Arc<Mutex<RendererState>>,
     pub record: Arc<Mutex<Record<ObjectEdit>>>,
@@ -59,6 +66,7 @@ pub struct EditorState {
     pub selected_object_id: Uuid,
     pub value_signals: Arc<Mutex<HashMap<String, RwSignal<String>>>>,
     pub current_modifiers: ModifiersState,
+    pub mouse_state: MouseState,
 }
 
 pub struct RecordState {
@@ -82,6 +90,12 @@ impl EditorState {
             selected_object_id: Uuid::nil(),
             value_signals: Arc::new(Mutex::new(HashMap::new())),
             current_modifiers: ModifiersState::empty(),
+            mouse_state: MouseState {
+                last_mouse_x: 0.0,
+                last_mouse_y: 0.0,
+                is_first_mouse: true,
+                right_mouse_pressed: false,
+            },
         }
     }
 

@@ -247,22 +247,27 @@ fn handle_cursor_moved(
     viewport: std::sync::Arc<Mutex<Viewport>>,
 ) -> Option<Box<dyn Fn(f64, f64, f64, f64)>> {
     Some(Box::new(
-        move |positionX: f64, positionY: f64, logPosX: f64, logPoxY: f64| {
-            // let mut editor = editor.lock().unwrap();
-            // let viewport = viewport.lock().unwrap();
-            // let window_size = WindowSize {
-            //     width: viewport.width as u32,
-            //     height: viewport.height as u32,
-            // };
+        move |position_x: f64, position_y: f64, logPosX: f64, logPoxY: f64| {
+            let mut editor_state = editor_state.lock().unwrap();
 
-            // editor.handle_mouse_move(
-            //     &window_size,
-            //     &gpu_resources.device,
-            //     positionX as f32,
-            //     positionY as f32,
-            // );
+            if editor_state.mouse_state.is_first_mouse {
+                editor_state.mouse_state.last_mouse_x = position_x as f64;
+                editor_state.mouse_state.last_mouse_y = position_y as f64;
+                editor_state.mouse_state.is_first_mouse = false;
+                return;
+            }
 
-            // handle_mouse_move(positionX as f32, positionY as f32);
+            let dx = position_x - editor_state.mouse_state.last_mouse_x as f64;
+            let dy = position_y - editor_state.mouse_state.last_mouse_y as f64;
+
+            editor_state.mouse_state.last_mouse_x = position_x;
+            editor_state.mouse_state.last_mouse_y = position_y;
+
+            // Only update camera if right mouse button is pressed
+            if editor_state.mouse_state.right_mouse_pressed {
+                // editor_state.update_camera_rotation(dx as f32, dy as f32);
+                handle_mouse_move(dx as f32, dy as f32);
+            }
         },
     ))
 }
@@ -274,6 +279,15 @@ fn handle_mouse_input(
     record: Arc<Mutex<Record<ObjectEdit>>>,
 ) -> Option<Box<dyn Fn(MouseButton, ElementState)>> {
     Some(Box::new(move |button, state| {
+        let mut editor_state = editor_state.lock().unwrap();
+
+        if button == MouseButton::Right {
+            let edit_config = match state {
+                ElementState::Pressed => editor_state.mouse_state.right_mouse_pressed = true,
+                ElementState::Released => editor_state.mouse_state.right_mouse_pressed = false,
+            };
+        }
+
         // let mut editor_orig = Arc::clone(&editor);
         // let mut editor = editor.lock().unwrap();
         // let viewport = viewport.lock().unwrap();
@@ -905,13 +919,12 @@ async fn main() {
                     gpu_resources.clone(),
                     viewport_3.clone(),
                 );
-                // window_handle.handle_mouse_input = handle_mouse_input(
-                //     state_4.clone(),
-                //     cloned3.clone(),
-                //     gpu_resources.clone(),
-                //     cloned_viewport2.clone(),
-                //     record_2.clone(),
-                // );
+                window_handle.handle_mouse_input = handle_mouse_input(
+                    editor_state.clone(),
+                    gpu_resources.clone(),
+                    viewport_4.clone(),
+                    record_2.clone(),
+                );
                 // window_handle.handle_window_resized = handle_window_resize(
                 //     cloned7,
                 //     gpu_resources.clone(),

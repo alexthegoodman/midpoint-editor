@@ -2,6 +2,7 @@ use floem::common::card_styles;
 use floem::common::small_button;
 use floem::views::dropdown::dropdown;
 use floem::views::text;
+use floem_renderer::gpu_resources;
 use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::helpers::saved_data::File;
@@ -46,6 +47,9 @@ pub fn properties_view(
     let state_5 = Arc::clone(&state_helper);
     let state_6 = Arc::clone(&state_helper);
     let state_7 = Arc::clone(&state_helper);
+
+    let gpu_2 = Arc::clone(&gpu_helper);
+    let gpu_3 = Arc::clone(&gpu_helper);
 
     let aside_width = 260.0;
     let quarters = (aside_width / 4.0) + (5.0 * 4.0);
@@ -176,11 +180,12 @@ pub fn properties_view(
                     let levels = saved_state.levels.clone();
                     let component_id = selected_object_id_signal.get();
 
+                    // add to saved_state
                     save_landscape_texture(
                         levels,
                         component_id.to_string(),
                         LandscapeTextureKinds::Rockmap,
-                        selected_id,
+                        selected_id.clone(),
                     );
 
                     let available_textures = saved_state
@@ -189,6 +194,22 @@ pub fn properties_view(
                         .unwrap_or(Vec::new())
                         .to_owned();
 
+                    let components = saved_state
+                        .levels
+                        .as_ref()
+                        .expect("Couldn't get levels")
+                        .get(0)
+                        .as_ref()
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_ref()
+                        .expect("Couldn't get components");
+                    let landscape_component = components
+                        .iter()
+                        .find(|l| l.id == component_id.to_string())
+                        .to_owned()
+                        .expect("Couldn't get landscape component")
+                        .to_owned();
                     let landscapes = saved_state
                         .landscapes
                         .as_ref()
@@ -196,8 +217,7 @@ pub fn properties_view(
                         .to_owned();
                     let landscape = landscapes
                         .iter()
-                        .find(|l| l.id == component_id.to_string())
-                        .to_owned();
+                        .find(|l| l.id == landscape_component.asset_id);
 
                     drop(saved_state);
                     let renderer_state = state_helper
@@ -218,16 +238,27 @@ pub fn properties_view(
                         .as_ref()
                         .expect("Couldn't get RendererState");
 
+                    println!("Adding to scene...");
+
+                    let gpu_helper = gpu_3.lock().unwrap();
+                    let gpu_resources = gpu_helper
+                        .gpu_resources
+                        .as_ref()
+                        .expect("Couldn't get gpu resources");
+
                     if let Some(texture) = available_textures
                         .clone()
                         .iter()
-                        .find(|t| t.id.clone() == component_id.to_string())
+                        .find(move |t| t.id.clone() == selected_id.clone())
                     {
+                        // add to scene
                         handle_add_landscape_texture(
                             renderer_state.clone(),
+                            &gpu_resources.device,
+                            &gpu_resources.queue,
                             project_id.to_string(),
-                            component_id.to_string(),
-                            component_id.to_string(),
+                            landscape_component.id.clone(),
+                            landscape_component.asset_id.clone(),
                             texture.fileName.clone(),
                             "Rockmap".to_string(),
                             landscape
@@ -238,6 +269,8 @@ pub fn properties_view(
                                 .expect("No rockmap?")
                                 .fileName,
                         );
+                    } else {
+                        println!("Texture not available!");
                     }
                 },
             ),
@@ -262,7 +295,7 @@ pub fn properties_view(
                         levels,
                         component_id.to_string(),
                         LandscapeTextureKinds::Rockmap,
-                        selected_id,
+                        selected_id.clone(),
                     );
 
                     let available_textures = saved_state
@@ -271,6 +304,32 @@ pub fn properties_view(
                         .unwrap_or(Vec::new())
                         .to_owned();
 
+                    // let landscapes = saved_state
+                    //     .landscapes
+                    //     .as_ref()
+                    //     .expect("No landscapes?")
+                    //     .to_owned();
+                    // let landscape = landscapes
+                    //     .iter()
+                    //     .find(|l| l.id == component_id.to_string())
+                    //     .to_owned();
+
+                    let components = saved_state
+                        .levels
+                        .as_ref()
+                        .expect("Couldn't get levels")
+                        .get(0)
+                        .as_ref()
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_ref()
+                        .expect("Couldn't get components");
+                    let landscape_component = components
+                        .iter()
+                        .find(|l| l.id == component_id.to_string())
+                        .to_owned()
+                        .expect("Couldn't get landscape component")
+                        .to_owned();
                     let landscapes = saved_state
                         .landscapes
                         .as_ref()
@@ -278,8 +337,7 @@ pub fn properties_view(
                         .to_owned();
                     let landscape = landscapes
                         .iter()
-                        .find(|l| l.id == component_id.to_string())
-                        .to_owned();
+                        .find(|l| l.id == landscape_component.asset_id);
 
                     drop(saved_state);
                     let renderer_state = state_helper
@@ -300,16 +358,26 @@ pub fn properties_view(
                         .as_ref()
                         .expect("Couldn't get RendererState");
 
+                    let gpu_helper = gpu_2.lock().unwrap();
+                    let gpu_resources = gpu_helper
+                        .gpu_resources
+                        .as_ref()
+                        .expect("Couldn't get gpu resources");
+
+                    println!("Adding to scene...");
+
                     if let Some(texture) = available_textures
                         .clone()
                         .iter()
-                        .find(|t| t.id.clone() == component_id.to_string())
+                        .find(move |t| t.id.clone() == selected_id.clone())
                     {
                         handle_add_landscape_texture(
                             renderer_state.clone(),
+                            &gpu_resources.device,
+                            &gpu_resources.queue,
                             project_id.to_string(),
-                            component_id.to_string(),
-                            component_id.to_string(),
+                            landscape_component.id.clone(),
+                            landscape_component.asset_id.clone(),
                             texture.fileName.clone(),
                             "Soil".to_string(),
                             landscape
@@ -320,6 +388,8 @@ pub fn properties_view(
                                 .expect("No soil?")
                                 .fileName,
                         );
+                    } else {
+                        println!("Texture not available!");
                     }
                 },
             ),

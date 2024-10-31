@@ -86,6 +86,7 @@ pub fn landscape_item(
 
                     disabled.set(true);
 
+                    // different than the landscape asset id, this is the component instance id
                     let landscapeComponentId = Uuid::new_v4();
 
                     // Get the data you need before spawning
