@@ -1,20 +1,22 @@
+use midpoint_engine::core::RendererState::ObjectConfig;
+use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::card_styles;
 use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::views::dropdown::dropdown;
 use midpoint_engine::floem::views::text;
 use midpoint_engine::floem_renderer::gpu_resources;
-use midpoint_engine::core::RendererState::ObjectConfig;
-use midpoint_engine::core::Viewport::Viewport;
+use midpoint_engine::handlers::handle_add_landscape_texture;
 use midpoint_engine::helpers::saved_data::File;
 use midpoint_engine::helpers::saved_data::LandscapeTextureKinds;
-use midpoint_engine::startup::handle_add_landscape_texture;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
 use midpoint_engine::floem::peniko::{Brush, Color};
-use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use midpoint_engine::floem::reactive::{
+    create_effect, create_rw_signal, create_signal, RwSignal, SignalRead,
+};
 use midpoint_engine::floem::reactive::{SignalGet, SignalUpdate};
 use midpoint_engine::floem::text::Weight;
 use midpoint_engine::floem::views::Decorators;

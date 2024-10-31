@@ -3,16 +3,18 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
+use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, RwSignal, SignalUpdate};
 use midpoint_engine::floem::taffy::{FlexDirection, FlexWrap};
-use midpoint_engine::floem::views::{button, container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
+use midpoint_engine::floem::views::{
+    button, container, dyn_container, dyn_stack, empty, label, scroll, v_stack,
+};
 use midpoint_engine::floem::IntoView;
 use midpoint_engine::floem_renderer::gpu_resources;
-use midpoint_engine::core::Viewport::Viewport;
+use midpoint_engine::handlers::handle_add_model;
 use midpoint_engine::helpers::saved_data::File;
-use midpoint_engine::startup::handle_add_model;
 use wgpu::util::DeviceExt;
 
 use midpoint_engine::floem::views::Decorators;
