@@ -91,10 +91,9 @@ pub fn landscape_item(
                     // different than the landscape asset id, this is the component instance id
                     let landscapeComponentId = Uuid::new_v4();
 
-                    // Get the data you need before spawning
                     let mut saved_state = state_helper
                         .saved_state
-                        .as_mut()
+                        .as_ref()
                         .expect("Couldn't get RendererState")
                         .lock()
                         .unwrap();
@@ -123,7 +122,9 @@ pub fn landscape_item(
                         .get_or_insert_with(Vec::new)
                         .push(landscape_component);
 
-                    drop(saved_state);
+                    state_helper.save_saved_state(saved_state);
+
+                    // drop(saved_state);
 
                     let mut renderer_state = state_helper
                         .renderer_state

@@ -1,11 +1,14 @@
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{card_styles, create_icon, nav_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
 use midpoint_engine::floem::keyboard::{Key, KeyCode, NamedKey};
 use midpoint_engine::floem::peniko::Color;
-use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use midpoint_engine::floem::reactive::{
+    create_effect, create_rw_signal, create_signal, RwSignal, SignalRead,
+};
 use midpoint_engine::floem::style::CursorStyle;
 use midpoint_engine::floem::taffy::AlignItems;
 use midpoint_engine::floem::text::Weight;
@@ -13,7 +16,6 @@ use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, h_stack, img, label, scroll, stack, svg, tab,
     text_input, v_stack, virtual_list, virtual_stack, VirtualDirection, VirtualItemSize,
 };
-use midpoint_engine::core::Viewport::Viewport;
 use uuid::Uuid;
 // use views::buttons::{nav_button, option_button, small_button};
 // use winit::{event_loop, window};
@@ -78,6 +80,8 @@ pub fn project_browser(
     let projects = get_projects().expect("Couldn't get projects");
     // v_stack((,))).style(|s| s.height_full())
 
+    let gpu_2 = Arc::clone(&gpu_helper);
+
     let project_list = create_rw_signal(projects); // for long lists technically
 
     v_stack((
@@ -96,6 +100,7 @@ pub fn project_browser(
                     .on_click({
                         let state_helper = state_helper.clone();
                         let manager = manager.clone();
+                        let gpu_2 = gpu_2.clone();
 
                         move |_| {
                             // join the WebSocket group for this project
@@ -126,6 +131,11 @@ pub fn project_browser(
                                 .unwrap();
                             renderer_state.project_selected = Some(uuid.clone());
                             renderer_state.current_view = "scene".to_string();
+
+                            drop(renderer_state);
+
+                            // restore the saved state to the rendererstate
+                            state_helper.restore_renderer_from_saved(gpu_2.clone());
 
                             println!("Project selected {:?}", project.name.clone());
 

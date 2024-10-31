@@ -173,7 +173,7 @@ pub fn properties_view(
                     // TODO: make DRY with Soil
 
                     let state_helper = state_6.lock().unwrap();
-                    let saved_state = state_helper
+                    let mut saved_state = state_helper
                         .saved_state
                         .as_ref()
                         .expect("Couldn't get RendererState")
@@ -212,6 +212,27 @@ pub fn properties_view(
                         .to_owned()
                         .expect("Couldn't get landscape component")
                         .to_owned();
+
+                    // update landscape_component landscape_properties.rockmap_texture_id
+                    let mut mutable_binding = saved_state
+                        .levels
+                        .as_mut()
+                        .expect("Couldn't get levels")
+                        .get_mut(0);
+                    let mut landscape_properties = mutable_binding
+                        .as_mut()
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_mut()
+                        .expect("Couldn't get components")
+                        .iter_mut()
+                        .find(|l| l.id == component_id.to_string())
+                        .expect("Couldn't get landscape component")
+                        .landscape_properties
+                        .as_mut()
+                        .expect("Couldn't get landscape properties");
+                    landscape_properties.rockmap_texture_id = Some(selected_id.clone());
+
                     let landscapes = saved_state
                         .landscapes
                         .as_ref()
@@ -221,7 +242,10 @@ pub fn properties_view(
                         .iter()
                         .find(|l| l.id == landscape_component.asset_id);
 
-                    drop(saved_state);
+                    // make sure to save saved state
+                    state_helper.save_saved_state(saved_state);
+
+                    // drop(saved_state);
                     let renderer_state = state_helper
                         .renderer_state
                         .as_ref()
@@ -284,7 +308,7 @@ pub fn properties_view(
                     println!("Selected Soil: {}", selected_id);
 
                     let state_helper = state_7.lock().unwrap();
-                    let saved_state = state_helper
+                    let mut saved_state = state_helper
                         .saved_state
                         .as_ref()
                         .expect("Couldn't get RendererState")
@@ -332,6 +356,27 @@ pub fn properties_view(
                         .to_owned()
                         .expect("Couldn't get landscape component")
                         .to_owned();
+
+                    // update landscape_component landscape_properties.soil_texture_id (condense with above?)
+                    let mut mutable_binding = saved_state
+                        .levels
+                        .as_mut()
+                        .expect("Couldn't get levels")
+                        .get_mut(0);
+                    let mut landscape_properties = mutable_binding
+                        .as_mut()
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_mut()
+                        .expect("Couldn't get components")
+                        .iter_mut()
+                        .find(|l| l.id == component_id.to_string())
+                        .expect("Couldn't get landscape component")
+                        .landscape_properties
+                        .as_mut()
+                        .expect("Couldn't get landscape properties");
+                    landscape_properties.soil_texture_id = Some(selected_id.clone());
+
                     let landscapes = saved_state
                         .landscapes
                         .as_ref()
@@ -341,7 +386,9 @@ pub fn properties_view(
                         .iter()
                         .find(|l| l.id == landscape_component.asset_id);
 
-                    drop(saved_state);
+                    state_helper.save_saved_state(saved_state);
+
+                    // drop(saved_state);
                     let renderer_state = state_helper
                         .renderer_state
                         .as_ref()

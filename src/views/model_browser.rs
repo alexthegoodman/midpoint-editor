@@ -14,7 +14,8 @@ use midpoint_engine::floem::views::{
 use midpoint_engine::floem::IntoView;
 use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::handlers::handle_add_model;
-use midpoint_engine::helpers::saved_data::File;
+use midpoint_engine::helpers::saved_data::{ComponentData, ComponentKind, File, GenericProperties};
+use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
 use midpoint_engine::floem::views::Decorators;
@@ -29,6 +30,7 @@ pub fn model_item(
     gpu_helper: Arc<Mutex<GpuHelper>>,
     label_text: String,
     filename: String,
+    model_id: String,
 ) -> impl View {
     let active = create_rw_signal(false);
 
@@ -56,6 +58,38 @@ pub fn model_item(
                         &gpu_resources.queue,
                         filename.clone(),
                     );
+
+                    // different than the asset id, this is the component instance id
+                    let component_id = Uuid::new_v4();
+
+                    // update saved data
+                    let mut saved_state = state_helper
+                        .saved_state
+                        .as_ref()
+                        .expect("Couldn't get RendererState")
+                        .lock()
+                        .unwrap();
+
+                    // add to `levels.components` in SavedContext
+                    let model_component = ComponentData {
+                        id: component_id.to_string().clone(),
+                        kind: Some(ComponentKind::Model),
+                        asset_id: model_id.clone(),
+                        generic_properties: GenericProperties {
+                            name: "New Model Component".to_string(),
+                        },
+                        landscape_properties: None,
+                        model_properties: None,
+                    };
+                    let mut levels = saved_state.levels.as_mut().expect("Couldn't get levels");
+                    levels
+                        .get_mut(0)
+                        .expect("Couldn't get first level")
+                        .components
+                        .get_or_insert_with(Vec::new)
+                        .push(model_component);
+
+                    state_helper.save_saved_state(saved_state);
                 }
             },
             active,
@@ -97,6 +131,7 @@ pub fn model_browser(
                         gpu_2.clone(),
                         model_data.fileName.clone(),
                         model_data.fileName.clone(),
+                        model_data.id.clone(),
                     )
                 },
             )

@@ -1,15 +1,25 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::fs;
+use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::Duration;
 
 use midpoint_engine::core::RendererState::RendererState;
 use midpoint_engine::core::RendererState::{ObjectConfig, ObjectProperty};
 use midpoint_engine::floem::keyboard::ModifiersState;
-use midpoint_engine::floem::reactive::{RwSignal, SignalUpdate};
-use midpoint_engine::helpers::saved_data::{File, LandscapeData, SavedState};
+use midpoint_engine::floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+use midpoint_engine::floem::GpuHelper;
+use midpoint_engine::floem_renderer::gpu_resources;
+use midpoint_engine::handlers::{
+    handle_add_landscape, handle_add_landscape_texture, handle_add_model,
+};
+use midpoint_engine::helpers::saved_data::{ComponentKind, File, LandscapeData, SavedState};
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::time::sleep;
 use undo::Edit;
 use undo::Record;
 use uuid::Uuid;
+
+use crate::helpers::utilities::get_common_os_dir;
 
 #[derive(Debug)]
 pub struct ObjectEdit {
@@ -162,6 +172,7 @@ pub struct NamedSignals {
 pub struct StateHelper {
     pub renderer_state: Option<Arc<Mutex<RendererState>>>,
     pub saved_state: Option<Arc<Mutex<SavedState>>>,
+    pub last_saved_state: Option<SavedState>, // for comparisons
     pub project_selected_signal: Option<RwSignal<Uuid>>,
     pub auth_token: String,
     // pub simple_singals: Arc<Mutex<HashMap<String, RwSignal<String>>>>
@@ -184,6 +195,7 @@ impl StateHelper {
         Self {
             renderer_state: None,
             saved_state: None,
+            last_saved_state: None,
             project_selected_signal: None,
             auth_token,
             file_signals: Arc::new(Mutex::new(HashMap::new())),
@@ -197,5 +209,177 @@ impl StateHelper {
     pub fn register_file_signal(&mut self, name: String, signal: Arc<UnboundedSender<UIMessage>>) {
         let mut signals = self.file_signals.lock().unwrap();
         signals.insert(name, signal);
+    }
+
+    pub fn restore_renderer_from_saved(&mut self, gpu_helper: Arc<Mutex<GpuHelper>>) {
+        let gpu_helper = gpu_helper.lock().unwrap();
+        let gpu_resources = gpu_helper
+            .gpu_resources
+            .as_ref()
+            .expect("Couldn't get gpu resources");
+        let cloned_saved_2 = self.saved_state.clone();
+        let saved_state = cloned_saved_2
+            .as_ref()
+            .expect("Couldn't get saved state")
+            .lock()
+            .unwrap();
+        let cloned_saved = saved_state.clone();
+        let components = cloned_saved
+            .levels
+            .as_ref()
+            .expect("Couldn't get levels")
+            .get(0)
+            .as_ref()
+            .expect("Couldn't get first level")
+            .components
+            .as_ref()
+            .expect("Couldn't get components");
+
+        let project_id = self
+            .project_selected_signal
+            .expect("Couldn't get project signal")
+            .get();
+
+        components.iter().for_each(move |component| {
+            // let saved_state = saved_state.clone();
+            if *component.kind.as_ref().expect("Couldn't get kind") == ComponentKind::Landscape {
+                let landscape_asset = saved_state
+                    .landscapes
+                    .as_ref()
+                    .expect("Couldn't get landscapes")
+                    .iter()
+                    .find(|l| l.id == component.asset_id)
+                    .expect("Couldn't find landscape asset");
+
+                handle_add_landscape(
+                    self.renderer_state
+                        .as_ref()
+                        .expect("Couldn't get RendererState")
+                        .clone(),
+                    &gpu_resources.device,
+                    &gpu_resources.queue,
+                    project_id.to_string(),
+                    component.asset_id.clone(),
+                    component.id.clone(),
+                    landscape_asset
+                        .heightmap
+                        .as_ref()
+                        .expect("Couldn't get heightmao")
+                        .fileName
+                        .clone(),
+                );
+
+                let landscape_properties = component
+                    .landscape_properties
+                    .as_ref()
+                    .expect("Couldn't get properties");
+
+                if landscape_properties.rockmap_texture_id.is_some() {
+                    let texture_asset = saved_state
+                        .textures
+                        .as_ref()
+                        .expect("Couldn't get landscapes")
+                        .iter()
+                        .find(|t| {
+                            t.id == *landscape_properties
+                                .rockmap_texture_id
+                                .as_ref()
+                                .expect("Couldn't get rockmap id")
+                        })
+                        .expect("Couldn't find landscape asset");
+
+                    handle_add_landscape_texture(
+                        self.renderer_state
+                            .as_ref()
+                            .expect("Couldn't get RendererState")
+                            .clone(),
+                        &gpu_resources.device,
+                        &gpu_resources.queue,
+                        project_id.to_string(),
+                        component.id.clone(),
+                        component.asset_id.clone(),
+                        texture_asset.fileName.clone(),
+                        "Rockmap".to_string(),
+                        landscape_asset
+                            .rockmap
+                            .as_ref()
+                            .expect("No rockmap?")
+                            .fileName
+                            .clone(),
+                    );
+                }
+                if landscape_properties.soil_texture_id.is_some() {
+                    let texture_asset = saved_state
+                        .textures
+                        .as_ref()
+                        .expect("Couldn't get landscapes")
+                        .iter()
+                        .find(|t| {
+                            t.id == *landscape_properties
+                                .soil_texture_id
+                                .as_ref()
+                                .expect("Couldn't get soil id")
+                        })
+                        .expect("Couldn't find landscape asset");
+
+                    handle_add_landscape_texture(
+                        self.renderer_state
+                            .as_ref()
+                            .expect("Couldn't get RendererState")
+                            .clone(),
+                        &gpu_resources.device,
+                        &gpu_resources.queue,
+                        project_id.to_string(),
+                        component.id.clone(),
+                        component.asset_id.clone(),
+                        texture_asset.fileName.clone(),
+                        "Soil".to_string(),
+                        landscape_asset
+                            .soil
+                            .as_ref()
+                            .expect("No soil?")
+                            .fileName
+                            .clone(),
+                    );
+                }
+            } else if *component.kind.as_ref().expect("Couldn't get kind") == ComponentKind::Model {
+                let model_asset = saved_state
+                    .models
+                    .iter()
+                    .find(|m| m.id == component.asset_id)
+                    .expect("Couldn't find model asset");
+
+                handle_add_model(
+                    self.renderer_state
+                        .as_ref()
+                        .expect("Couldn't get RendererState")
+                        .clone(),
+                    &gpu_resources.device,
+                    &gpu_resources.queue,
+                    model_asset.fileName.clone(),
+                );
+            }
+        });
+    }
+
+    pub fn save_saved_state(&self, saved_state: MutexGuard<SavedState>) {
+        let json = serde_json::to_string_pretty(&saved_state.to_owned())
+            .expect("Couldn't serialize saved state");
+        let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+        let project_id = self
+            .project_selected_signal
+            .expect("Couldn't get project signal")
+            .get();
+        let save_path = sync_dir
+            .join("midpoint")
+            .join("projects")
+            .join(project_id.to_string())
+            .join("midpoint.json");
+
+        println!("Saving saved state... {}", save_path.display());
+
+        fs::write(&save_path, json).expect("Couldn't write saved state");
+
+        println!("Saved!");
     }
 }

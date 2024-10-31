@@ -124,12 +124,12 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                     // Render partial screen content
                     // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
                     render_pass.set_scissor_rect(
-                        400,
+                        500,
                         0,
                         window_handle
                             .window_width
                             .expect("Couldn't get window width")
-                            - 400,
+                            - 500,
                         window_handle
                             .window_height
                             .expect("Couldn't get window height"),
@@ -545,6 +545,9 @@ async fn main() {
 
     // // Disconnect when done
     // manager.disconnect();
+
+    // watch editor_state.saved_state for changes and save to file as needed
+    // actually - will just use a helper to save out file when updating state
 
     let (mut app, window_id) = app.window(
         move |_| {
