@@ -105,6 +105,7 @@ pub fn landscape_item(
                         asset_id: landscape.id.clone(),
                         generic_properties: GenericProperties {
                             name: "New Landscape Component".to_string(),
+                            position: [0.0, 0.0, 0.0],
                         },
                         landscape_properties: Some(LandscapeProperties {
                             // these are the visible texture ids, not the map ids, so are added after adding

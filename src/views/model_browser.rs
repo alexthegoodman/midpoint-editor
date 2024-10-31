@@ -52,15 +52,23 @@ pub fn model_item(
                         .renderer_state
                         .as_ref()
                         .expect("Couldn't get RendererState");
+                    let project_id = state_helper
+                        .project_selected_signal
+                        .expect("Couldn't get project signal")
+                        .get();
+
+                    // different than the asset id, this is the component instance id
+                    let component_id = Uuid::new_v4();
+
                     handle_add_model(
                         renderer_state.clone(),
                         &gpu_resources.device,
                         &gpu_resources.queue,
+                        project_id.to_string(),
+                        model_id.clone(),
+                        component_id.to_string(),
                         filename.clone(),
                     );
-
-                    // different than the asset id, this is the component instance id
-                    let component_id = Uuid::new_v4();
 
                     // update saved data
                     let mut saved_state = state_helper
@@ -77,6 +85,7 @@ pub fn model_item(
                         asset_id: model_id.clone(),
                         generic_properties: GenericProperties {
                             name: "New Model Component".to_string(),
+                            position: [0.0, 0.0, 0.0],
                         },
                         landscape_properties: None,
                         model_properties: None,

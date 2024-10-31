@@ -3,7 +3,6 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use bytemuck::Contiguous;
-use cgmath::Vector4;
 use editor_state::{EditorState, ObjectEdit, StateHelper, UIMessage};
 use helpers::auth::read_auth_token;
 use helpers::websocket::{Call, WebSocketManager};

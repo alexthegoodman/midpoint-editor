@@ -269,6 +269,26 @@ impl StateHelper {
                         .clone(),
                 );
 
+                // restore generic properties like position
+                let mut renderer_state = self
+                    .renderer_state
+                    .as_mut()
+                    .expect("Couldn't get RendererState")
+                    .lock()
+                    .unwrap();
+
+                let mut renderer_landscape = renderer_state
+                    .landscapes
+                    .iter_mut()
+                    .find(|l| l.id == component.id.clone())
+                    .expect("Couldn't get Renderer Landscape");
+                let position = component.generic_properties.position;
+
+                renderer_landscape.transform.update_position(position);
+
+                drop(renderer_state);
+
+                // restore landscape specific properties
                 let landscape_properties = component
                     .landscape_properties
                     .as_ref()
@@ -356,8 +376,32 @@ impl StateHelper {
                         .clone(),
                     &gpu_resources.device,
                     &gpu_resources.queue,
+                    project_id.to_string(),
+                    model_asset.id.clone(),
+                    component.id.clone(),
                     model_asset.fileName.clone(),
                 );
+
+                // restore generic properties like position
+                let mut renderer_state = self
+                    .renderer_state
+                    .as_mut()
+                    .expect("Couldn't get RendererState")
+                    .lock()
+                    .unwrap();
+
+                let mut renderer_model = renderer_state
+                    .models
+                    .iter_mut()
+                    .find(|m| m.id == component.id.clone())
+                    .expect("Couldn't get Renderer Model");
+                let position = component.generic_properties.position;
+
+                renderer_model.meshes.iter_mut().for_each(move |mesh| {
+                    mesh.transform.update_position(position);
+                });
+
+                drop(renderer_state);
             }
         });
     }
