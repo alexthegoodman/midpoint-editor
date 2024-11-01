@@ -16,6 +16,8 @@ use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, h_stack, img, label, scroll, stack, svg, tab,
     text_input, v_stack, virtual_list, virtual_stack, VirtualDirection, VirtualItemSize,
 };
+use midpoint_engine::helpers::utilities::load_project_state;
+use midpoint_engine::startup::restore_renderer_from_saved;
 use uuid::Uuid;
 // use views::buttons::{nav_button, option_button, small_button};
 // use winit::{event_loop, window};
@@ -30,7 +32,7 @@ use midpoint_engine::floem::IntoView;
 use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
-use crate::helpers::projects::{get_projects, load_project_state, ProjectInfo};
+use crate::helpers::projects::{get_projects, ProjectInfo};
 use crate::helpers::websocket::WebSocketManager;
 
 pub fn project_item(
@@ -112,7 +114,7 @@ pub fn project_browser(
                             let saved_state = load_project_state(&project.name)
                                 .expect("Couldn't get project saved state");
                             let saved_state = Arc::new(Mutex::new(saved_state));
-                            state_helper.saved_state = Some(saved_state);
+                            state_helper.saved_state = Some(saved_state.clone());
 
                             // update the UI signal
                             let project_selected = state_helper
@@ -135,7 +137,16 @@ pub fn project_browser(
                             drop(renderer_state);
 
                             // restore the saved state to the rendererstate
-                            state_helper.restore_renderer_from_saved(gpu_2.clone());
+                            restore_renderer_from_saved(
+                                gpu_2.clone(),
+                                uuid.clone().to_string(),
+                                saved_state.clone(),
+                                state_helper
+                                    .renderer_state
+                                    .as_ref()
+                                    .cloned()
+                                    .expect("Couldn't get RendererState"),
+                            );
 
                             println!("Project selected {:?}", project.name.clone());
 
