@@ -1,10 +1,12 @@
 pub mod app;
 pub mod aside;
 pub mod audio;
+pub mod component_browser;
 pub mod concepts;
 pub mod editor_settings;
 pub mod inputs;
 pub mod landscape_browser;
+pub mod level_browser;
 pub mod map;
 pub mod model_browser;
 pub mod performance;

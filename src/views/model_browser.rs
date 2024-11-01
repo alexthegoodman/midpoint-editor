@@ -128,28 +128,25 @@ pub fn model_browser(
         model_data.set(saved_state.models.clone());
     });
 
-    v_stack((
-        (label(|| "Models"),),
-        container((scroll(
-            dyn_stack(
-                move || model_data.get(),
-                move |model_data| model_data.id.clone(),
-                move |model_data| {
-                    model_item(
-                        state_2.clone(),
-                        gpu_2.clone(),
-                        model_data.fileName.clone(),
-                        model_data.fileName.clone(),
-                        model_data.id.clone(),
-                    )
-                },
-            )
-            .into_view(),
-        ),))
-        .style(|s| {
-            s.flex_direction(FlexDirection::Row)
-                .flex_wrap(FlexWrap::Wrap)
-        }),
-    ))
+    container((scroll(
+        dyn_stack(
+            move || model_data.get(),
+            move |model_data| model_data.id.clone(),
+            move |model_data| {
+                model_item(
+                    state_2.clone(),
+                    gpu_2.clone(),
+                    model_data.fileName.clone(),
+                    model_data.fileName.clone(),
+                    model_data.id.clone(),
+                )
+            },
+        )
+        .into_view(),
+    ),))
+    .style(|s| {
+        s.flex_direction(FlexDirection::Row)
+            .flex_wrap(FlexWrap::Wrap)
+    })
     .style(|s| s.width(260.0))
 }

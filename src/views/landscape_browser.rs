@@ -225,22 +225,19 @@ pub fn landscape_browser(
         );
     });
 
-    v_stack((
-        (label(|| "Landscapes"),),
-        container((scroll(
-            dyn_stack(
-                move || landscape_data.get(),
-                move |landscape_data| landscape_data.id.clone(),
-                move |landscape_data| {
-                    landscape_item(state_2.clone(), gpu_helper.clone(), landscape_data)
-                },
-            )
-            .into_view(),
-        ),))
-        .style(|s| {
-            s.flex_direction(FlexDirection::Row)
-                .flex_wrap(FlexWrap::Wrap)
-        }),
-    ))
+    container((scroll(
+        dyn_stack(
+            move || landscape_data.get(),
+            move |landscape_data| landscape_data.id.clone(),
+            move |landscape_data| {
+                landscape_item(state_2.clone(), gpu_helper.clone(), landscape_data)
+            },
+        )
+        .into_view(),
+    ),))
+    .style(|s| {
+        s.flex_direction(FlexDirection::Row)
+            .flex_wrap(FlexWrap::Wrap)
+    })
     .style(|s| s.width(260.0))
 }
