@@ -2413,6 +2413,8 @@ dependencies = [
  "im",
  "image",
  "midpoint-engine",
+ "nalgebra",
+ "nalgebra-glm",
  "once_cell",
  "regex",
  "reqwest 0.12.8",
