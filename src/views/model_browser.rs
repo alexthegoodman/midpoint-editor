@@ -86,6 +86,8 @@ pub fn model_item(
                         generic_properties: GenericProperties {
                             name: "New Model Component".to_string(),
                             position: [0.0, 0.0, 0.0],
+                            rotation: [0.0, 0.0, 0.0],
+                            scale: [1.0, 1.0, 1.0],
                         },
                         landscape_properties: None,
                         model_properties: None,

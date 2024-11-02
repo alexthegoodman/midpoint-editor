@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
@@ -27,8 +28,7 @@ pub fn component_item(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     label_text: String,
-    filename: String,
-    model_id: String,
+    component_data: ComponentData,
 ) -> impl View {
     let active = create_rw_signal(false);
 
@@ -39,7 +39,36 @@ pub fn component_item(
             "plus",
             {
                 move |_| {
-                    // add to scene
+                    let mut state_helper = state_helper.lock().unwrap();
+
+                    // open properties panel, set selected id
+                    let object_selected_signal = state_helper
+                        .object_selected_signal
+                        .expect("Couldn't get signal");
+                    object_selected_signal.set(true);
+                    let selected_object_id_signal = state_helper
+                        .selected_object_id_signal
+                        .expect("Couldn't get signal");
+                    selected_object_id_signal
+                        .set(Uuid::from_str(&component_data.id).expect("Couldn't extract uuid"));
+                    let selected_object_data_signal = state_helper
+                        .selected_object_data_signal
+                        .expect("Couldn't get signal");
+                    selected_object_data_signal.set(component_data.clone());
+
+                    // sync other ids
+                    let mut renderer_state = state_helper
+                        .renderer_state
+                        .as_mut()
+                        .expect("Couldn't get renderer state")
+                        .lock()
+                        .unwrap();
+                    renderer_state.object_selected =
+                        Some(Uuid::from_str(&component_data.id).expect("Couldn't extract uuid"));
+                    renderer_state.object_selected_kind = component_data.kind.clone();
+                    renderer_state.object_selected_data = Some(component_data.clone());
+
+                    // gizmo displays automatically
                 }
             },
             active,
@@ -89,8 +118,7 @@ pub fn component_browser(
                     state_2.clone(),
                     gpu_2.clone(),
                     component_data.generic_properties.name.clone(),
-                    component_data.id.clone(),
-                    component_data.id.clone(),
+                    component_data,
                 )
             },
         )

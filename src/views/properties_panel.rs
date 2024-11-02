@@ -6,6 +6,7 @@ use midpoint_engine::floem::views::dropdown::dropdown;
 use midpoint_engine::floem::views::text;
 use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::handlers::handle_add_landscape_texture;
+use midpoint_engine::helpers::saved_data::ComponentData;
 use midpoint_engine::helpers::saved_data::File;
 use midpoint_engine::helpers::saved_data::LandscapeTextureKinds;
 use std::collections::HashMap;
@@ -39,7 +40,7 @@ pub fn properties_view(
     viewport: std::sync::Arc<Mutex<Viewport>>,
     object_selected_signal: RwSignal<bool>,
     selected_object_id_signal: RwSignal<Uuid>,
-    selected_object_data: RwSignal<ObjectConfig>,
+    selected_object_data: RwSignal<ComponentData>,
 ) -> impl IntoView {
     // let polygon_data = selected_polygon_data.read();
 
@@ -122,7 +123,12 @@ pub fn properties_view(
         h_stack((
             styled_input(
                 "X:".to_string(),
-                &selected_object_data.read().borrow().position.0.to_string(),
+                &selected_object_data
+                    .read()
+                    .borrow()
+                    .generic_properties
+                    .position[0]
+                    .to_string(),
                 "X Position",
                 Box::new({
                     move |mut editor_state, value| {
@@ -135,7 +141,12 @@ pub fn properties_view(
             .style(move |s| s.width(thirds).margin_right(5.0)),
             styled_input(
                 "Y:".to_string(),
-                &selected_object_data.read().borrow().position.1.to_string(),
+                &selected_object_data
+                    .read()
+                    .borrow()
+                    .generic_properties
+                    .position[1]
+                    .to_string(),
                 "Y Position",
                 Box::new({
                     move |mut editor_state, value| {
@@ -148,7 +159,12 @@ pub fn properties_view(
             .style(move |s| s.width(thirds).margin_right(5.0)),
             styled_input(
                 "Z:".to_string(),
-                &selected_object_data.read().borrow().position.2.to_string(),
+                &selected_object_data
+                    .read()
+                    .borrow()
+                    .generic_properties
+                    .position[2]
+                    .to_string(),
                 "Z Position",
                 Box::new({
                     move |mut editor_state, value| {

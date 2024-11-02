@@ -106,6 +106,8 @@ pub fn landscape_item(
                         generic_properties: GenericProperties {
                             name: "New Landscape Component".to_string(),
                             position: [0.0, 0.0, 0.0],
+                            rotation: [0.0, 0.0, 0.0],
+                            scale: [1.0, 1.0, 1.0],
                         },
                         landscape_properties: Some(LandscapeProperties {
                             // these are the visible texture ids, not the map ids, so are added after adding
@@ -121,7 +123,7 @@ pub fn landscape_item(
                         .expect("Couldn't get first level")
                         .components
                         .get_or_insert_with(Vec::new)
-                        .push(landscape_component);
+                        .push(landscape_component.clone());
 
                     state_helper.save_saved_state(saved_state);
 
@@ -181,11 +183,7 @@ pub fn landscape_item(
                     let selected_object_data_signal = state_helper
                         .selected_object_data_signal
                         .expect("Couldn't get signal");
-                    selected_object_data_signal.set(ObjectConfig {
-                        id: landscapeComponentId,
-                        name: "New Landscape".to_string(),
-                        position: (0.0, 0.0, 0.0),
-                    });
+                    selected_object_data_signal.set(landscape_component.clone());
 
                     println!("Landscape added!");
 

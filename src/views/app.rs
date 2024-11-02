@@ -1,3 +1,5 @@
+use midpoint_engine::core::RendererState::ObjectConfig;
+use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::reactive::create_effect;
 use midpoint_engine::floem::reactive::create_rw_signal;
 use midpoint_engine::floem::reactive::SignalGet;
@@ -5,8 +7,9 @@ use midpoint_engine::floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
 };
-use midpoint_engine::core::RendererState::ObjectConfig;
-use midpoint_engine::core::Viewport::Viewport;
+use midpoint_engine::helpers::saved_data::ComponentData;
+use midpoint_engine::helpers::saved_data::ComponentKind;
+use midpoint_engine::helpers::saved_data::GenericProperties;
 use std::sync::{Arc, Mutex, MutexGuard};
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
@@ -29,10 +32,23 @@ pub fn project_view(
     // object_selected? model_selected?
     let object_selected_signal = create_rw_signal(false);
     let selected_object_id_signal = create_rw_signal(Uuid::nil());
-    let selected_object_data_signal = create_rw_signal(ObjectConfig {
-        id: Uuid::nil(),
-        name: "".to_string(),
-        position: (0.0, 0.0, 0.0),
+    // let selected_object_data_signal = create_rw_signal(ObjectConfig {
+    //     id: Uuid::nil(),
+    //     name: "".to_string(),
+    //     position: (0.0, 0.0, 0.0),
+    // });
+    let selected_object_data_signal = create_rw_signal(ComponentData {
+        id: "".to_string(),
+        kind: Some(ComponentKind::Model),
+        asset_id: "".to_string(),
+        generic_properties: GenericProperties {
+            name: "".to_string(),
+            position: [0.0, 0.0, 0.0],
+            rotation: [0.0, 0.0, 0.0],
+            scale: [1.0, 1.0, 1.0],
+        },
+        landscape_properties: None,
+        model_properties: None,
     });
 
     let state_2 = Arc::clone(&state_helper);

@@ -6,6 +6,7 @@ use bytemuck::Contiguous;
 use editor_state::{EditorState, ObjectEdit, StateHelper, UIMessage};
 use helpers::auth::read_auth_token;
 use helpers::websocket::{Call, WebSocketManager};
+use midpoint_engine::core::Rays::{create_ray_debug_mesh, create_ray_from_mouse};
 use midpoint_engine::core::RendererState::{Point, RendererState, WindowSize};
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{nav_button, option_button, small_button};
@@ -17,6 +18,7 @@ use midpoint_engine::floem_winit::event::{
     ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta,
 };
 use midpoint_engine::handlers::{get_camera, handle_key_press, handle_mouse_move, Vertex};
+use midpoint_engine::helpers::saved_data::ComponentKind;
 use uuid::Uuid;
 use views::app::app_view;
 // use winit::{event_loop, window};
@@ -66,9 +68,9 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
             //     .expect("Couldn't get user engine")
             //     .lock()
             //     .unwrap();
-            let editor = get_engine_editor(handle);
-            let engine = editor
-                .as_ref()
+            let mut editor = get_engine_editor(handle);
+            let mut engine = editor
+                .as_mut()
                 .expect("Couldn't get user engine")
                 .lock()
                 .unwrap();
@@ -147,10 +149,17 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         height: viewport.height as u32,
                     };
 
+                    drop(viewport);
+
                     let mut camera = get_camera();
 
                     // TODO: bad to call on every frame?
                     camera.update();
+
+                    let last_ray = engine.last_ray.expect("Couldn't get last ray");
+
+                    // update rapier collisions
+                    engine.update_rapier();
 
                     let camera_matrix = camera.view_projection_matrix;
                     gpu_resources.queue.write_buffer(
@@ -158,6 +167,42 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         0,
                         bytemuck::cast_slice(camera_matrix.as_slice()),
                     );
+
+                    // draw debug raycast
+                    if engine.last_ray.is_some() {
+                        let (vertex_buffer, index_buffer, index_count) =
+                            create_ray_debug_mesh(&last_ray, 1000.0, 0.0002, &gpu_resources.device);
+                        render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                        render_pass.set_bind_group(1, &engine.gizmo.bind_group, &[]);
+                        render_pass.set_bind_group(2, &engine.gizmo.texture_bind_group, &[]);
+
+                        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                        render_pass
+                            .set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+
+                        render_pass.draw_indexed(0..index_count as u32, 0, 0..1);
+                    }
+
+                    // draw gizmo
+                    if engine.object_selected.is_some() {
+                        engine
+                            .gizmo
+                            .transform
+                            .update_uniform_buffer(&gpu_resources.queue);
+                        render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                        render_pass.set_bind_group(1, &engine.gizmo.bind_group, &[]);
+                        render_pass.set_bind_group(2, &engine.gizmo.texture_bind_group, &[]);
+
+                        render_pass.set_vertex_buffer(0, engine.gizmo.vertex_buffer.slice(..));
+                        render_pass.set_index_buffer(
+                            engine.gizmo.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint32,
+                        );
+
+                        // println!("engine.gizmo.num_indices {:?}", engine.gizmo.num_indices);
+
+                        render_pass.draw_indexed(0..engine.gizmo.num_indices, 0, 0..1);
+                    }
 
                     // draw utility grids
                     for grid in &engine.grids {
@@ -258,31 +303,150 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 }
 
 fn handle_cursor_moved(
+    state_helper: Arc<Mutex<StateHelper>>,
     mut editor_state: Arc<Mutex<EditorState>>,
     gpu_resources: std::sync::Arc<GpuResources>,
     viewport: std::sync::Arc<Mutex<Viewport>>,
 ) -> Option<Box<dyn Fn(f64, f64, f64, f64)>> {
     Some(Box::new(
         move |position_x: f64, position_y: f64, logPosX: f64, logPoxY: f64| {
-            let mut editor_state = editor_state.lock().unwrap();
+            let camera = get_camera();
 
-            if editor_state.mouse_state.is_first_mouse {
-                editor_state.mouse_state.last_mouse_x = position_x as f64;
-                editor_state.mouse_state.last_mouse_y = position_y as f64;
-                editor_state.mouse_state.is_first_mouse = false;
+            let mut editor_state = editor_state.lock().unwrap();
+            let mut renderer_state = editor_state.renderer_state.lock().unwrap();
+            let viewport = viewport.lock().unwrap();
+
+            if renderer_state.mouse_state.is_first_mouse {
+                renderer_state.mouse_state.last_mouse_x = position_x as f64;
+                renderer_state.mouse_state.last_mouse_y = position_y as f64;
+                renderer_state.mouse_state.is_first_mouse = false;
                 return;
             }
 
-            let dx = position_x - editor_state.mouse_state.last_mouse_x as f64;
-            let dy = position_y - editor_state.mouse_state.last_mouse_y as f64;
+            let dx = position_x - renderer_state.mouse_state.last_mouse_x as f64;
+            let dy = position_y - renderer_state.mouse_state.last_mouse_y as f64;
 
-            editor_state.mouse_state.last_mouse_x = position_x;
-            editor_state.mouse_state.last_mouse_y = position_y;
+            renderer_state.mouse_state.last_mouse_x = position_x;
+            renderer_state.mouse_state.last_mouse_y = position_y;
 
             // Only update camera if right mouse button is pressed
-            if editor_state.mouse_state.right_mouse_pressed {
+            if renderer_state.mouse_state.right_mouse_pressed {
                 // editor_state.update_camera_rotation(dx as f32, dy as f32);
                 handle_mouse_move(dx as f32, dy as f32);
+            }
+
+            // create constant raycast
+            // let ray = create_ray_from_mouse(
+            //     (position_x as f32, position_y as f32),
+            //     camera,
+            //     viewport.width as u32,
+            //     viewport.height as u32,
+            // );
+            let ray = renderer_state.update_rays(
+                (position_x as f32, position_y as f32),
+                camera,
+                viewport.width as u32,
+                viewport.height as u32,
+            );
+
+            renderer_state.last_ray = Some(ray);
+
+            if (renderer_state.mouse_state.drag_started) {
+                renderer_state.mouse_state.drag_started = false;
+                renderer_state.mouse_state.is_dragging = true;
+            }
+            if (renderer_state.mouse_state.drag_started || renderer_state.mouse_state.is_dragging) {
+                if renderer_state.object_selected.is_some() {
+                    println!("Dragging while component selected!");
+
+                    // get component from saved state
+                    let state_helper = state_helper.lock().unwrap();
+                    let saved_state = state_helper
+                        .saved_state
+                        .as_ref()
+                        .expect("Couldn't get saved state");
+                    let saved_state = saved_state.lock().unwrap();
+                    let component = saved_state
+                        .levels
+                        .as_ref()
+                        .expect("Couldn't get levels")
+                        .get(0)
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_ref()
+                        .expect("Couldn't get components")
+                        .iter()
+                        .find(|c| {
+                            c.id == renderer_state
+                                .object_selected
+                                .expect("Couldn't get selected object")
+                                .to_string()
+                        })
+                        .expect("Couldn't get component match");
+
+                    let mouse_state = renderer_state.mouse_state.clone();
+
+                    // let savable_transform =
+                    //     renderer_state
+                    //         .gizmo
+                    //         .update_transform(&camera, &component, mouse_state);
+
+                    // if savable_transform.is_some() {
+                    //     let savable_transform =
+                    //         savable_transform.expect("Couldn't get savable_transform");
+
+                    //     let mut component_data = component.clone();
+
+                    //     // TODO: update saved_state with new ComponentData (actually saved on mouse release)
+
+                    //     // TODO: update renderer_state.selected_object_data with new ComponentData
+                    //     component_data.generic_properties.position = savable_transform[0];
+                    //     component_data.generic_properties.rotation = savable_transform[1];
+                    //     component_data.generic_properties.scale = savable_transform[2];
+
+                    //     renderer_state.object_selected_data = Some(component_data);
+
+                    //     // TODO: update signals
+
+                    //     // check object_type and set new transform in rendererstate
+                    //     match component
+                    //         .kind
+                    //         .as_ref()
+                    //         .expect("Couldn't get component kind")
+                    //     {
+                    //         ComponentKind::Model => {
+                    //             let mut matching_model = renderer_state
+                    //                 .models
+                    //                 .iter_mut()
+                    //                 .find(|m| m.id == component.id)
+                    //                 .expect("Couldn't find matching model");
+
+                    //             matching_model.meshes.iter_mut().for_each(move |mesh| {
+                    //                 mesh.transform.update_position(savable_transform[0]);
+                    //                 mesh.transform.update_rotation(savable_transform[1]);
+                    //                 mesh.transform.update_scale(savable_transform[2]);
+                    //             });
+                    //         }
+                    //         ComponentKind::Landscape => {
+                    //             let mut matching_landscape = renderer_state
+                    //                 .landscapes
+                    //                 .iter_mut()
+                    //                 .find(|m| m.id == component.id)
+                    //                 .expect("Couldn't find matching landscape");
+
+                    //             matching_landscape
+                    //                 .transform
+                    //                 .update_position(savable_transform[0]);
+                    //             matching_landscape
+                    //                 .transform
+                    //                 .update_rotation(savable_transform[1]);
+                    //             matching_landscape
+                    //                 .transform
+                    //                 .update_scale(savable_transform[2]);
+                    //         }
+                    //     }
+                    // }
+                }
             }
         },
     ))
@@ -296,11 +460,27 @@ fn handle_mouse_input(
 ) -> Option<Box<dyn Fn(MouseButton, ElementState)>> {
     Some(Box::new(move |button, state| {
         let mut editor_state = editor_state.lock().unwrap();
+        let mut renderer_state = editor_state.renderer_state.lock().unwrap();
+
+        if renderer_state.mouse_state.last_mouse_x < 500.0 {
+            println!("non-propagated click");
+            return;
+        }
 
         if button == MouseButton::Right {
             let edit_config = match state {
-                ElementState::Pressed => editor_state.mouse_state.right_mouse_pressed = true,
-                ElementState::Released => editor_state.mouse_state.right_mouse_pressed = false,
+                ElementState::Pressed => renderer_state.mouse_state.right_mouse_pressed = true,
+                ElementState::Released => renderer_state.mouse_state.right_mouse_pressed = false,
+            };
+        }
+        if button == MouseButton::Left {
+            let edit_config = match state {
+                ElementState::Pressed => {
+                    renderer_state.mouse_state.drag_started = true;
+                }
+                ElementState::Released => {
+                    renderer_state.mouse_state.is_dragging = false;
+                }
             };
         }
 
@@ -419,9 +599,11 @@ fn handle_modifiers_changed(
 ) -> Option<Box<dyn FnMut(Modifiers)>> {
     Some(Box::new(move |modifiers: Modifiers| {
         let mut editor_state = editor_state.lock().unwrap();
+        let mut renderer_state = editor_state.renderer_state.lock().unwrap();
+
         println!("modifiers changed");
         let modifier_state = modifiers.state();
-        editor_state.current_modifiers = modifier_state;
+        renderer_state.current_modifiers = modifier_state;
     }))
 }
 
@@ -439,8 +621,11 @@ fn handle_keyboard_input(
         }
 
         let mut editor_state = editor_state.lock().unwrap();
+        let mut renderer_state = editor_state.renderer_state.lock().unwrap();
         // Check for Ctrl+Z (undo)
-        let modifiers = editor_state.current_modifiers;
+        let modifiers = renderer_state.current_modifiers;
+
+        drop(renderer_state);
 
         let logical_key_text = event.logical_key.to_text().unwrap_or_default();
         match logical_key_text {
@@ -503,6 +688,7 @@ async fn main() {
     let state_2 = Arc::clone(&state_helper);
     let state_3 = Arc::clone(&state_helper);
     let state_4 = Arc::clone(&state_helper);
+    let state_5 = Arc::clone(&state_helper);
 
     let gpu_cloned = Arc::clone(&gpu_helper);
     let gpu_cloned2 = Arc::clone(&gpu_helper);
@@ -679,6 +865,8 @@ async fn main() {
                         }],
                     },
                 );
+
+                let camera_bind_group_layout = Arc::new(camera_bind_group_layout);
 
                 let model_bind_group_layout = gpu_resources.device.create_bind_group_layout(
                     &wgpu::BindGroupLayoutDescriptor {
@@ -915,6 +1103,10 @@ async fn main() {
                     color_render_mode_buffer.clone(),
                     camera_uniform_buffer.clone(),
                     camera_bind_group.clone(),
+                    &camera,
+                    window_width,
+                    window_height,
+                    camera_bind_group_layout.clone(),
                 )
                 .await;
 
@@ -936,6 +1128,7 @@ async fn main() {
                 window_handle.user_editor = Some(Box::new(renderer_state_2));
 
                 window_handle.handle_cursor_moved = handle_cursor_moved(
+                    state_5.clone(),
                     editor_state.clone(),
                     gpu_resources.clone(),
                     viewport_3.clone(),

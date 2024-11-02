@@ -12,7 +12,9 @@ use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::handlers::{
     handle_add_landscape, handle_add_landscape_texture, handle_add_model,
 };
-use midpoint_engine::helpers::saved_data::{ComponentKind, File, LandscapeData, SavedState};
+use midpoint_engine::helpers::saved_data::{
+    ComponentData, ComponentKind, File, LandscapeData, SavedState,
+};
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
 use undo::Edit;
@@ -61,22 +63,15 @@ impl Edit for ObjectEdit {
     }
 }
 
-pub struct MouseState {
-    pub is_first_mouse: bool,
-    pub last_mouse_x: f64,
-    pub last_mouse_y: f64,
-    pub right_mouse_pressed: bool,
-}
-
 pub struct EditorState {
     pub renderer_state: Arc<Mutex<RendererState>>,
     pub record: Arc<Mutex<Record<ObjectEdit>>>,
     pub record_state: RecordState,
-    pub object_selected: bool,
-    pub selected_object_id: Uuid,
+    // pub object_selected: bool,
+    // pub selected_object_id: Uuid,
     pub value_signals: Arc<Mutex<HashMap<String, RwSignal<String>>>>,
-    pub current_modifiers: ModifiersState,
-    pub mouse_state: MouseState,
+    // pub current_modifiers: ModifiersState,
+    // pub mouse_state: MouseState,
 }
 
 pub struct RecordState {
@@ -96,23 +91,30 @@ impl EditorState {
                 renderer_state: Arc::clone(&renderer_state),
                 // record: Arc::clone(&record),
             },
-            object_selected: false,
-            selected_object_id: Uuid::nil(),
+            // object_selected: false,
+            // selected_object_id: Uuid::nil(),
             value_signals: Arc::new(Mutex::new(HashMap::new())),
-            current_modifiers: ModifiersState::empty(),
-            mouse_state: MouseState {
-                last_mouse_x: 0.0,
-                last_mouse_y: 0.0,
-                is_first_mouse: true,
-                right_mouse_pressed: false,
-            },
+            // current_modifiers: ModifiersState::empty(),
+            // mouse_state: MouseState {
+            //     last_mouse_x: 0.0,
+            //     last_mouse_y: 0.0,
+            //     is_first_mouse: true,
+            //     right_mouse_pressed: false,
+            //     drag_started: false,
+            //     is_dragging: false,
+            // },
         }
     }
 
     // Helper method to register a new signal
-    pub fn register_signal(&mut self, name: String, signal: RwSignal<String>) {
+    pub fn register_signal(
+        &mut self,
+        name: String,
+        signal: RwSignal<String>,
+        selected_object_id: String,
+    ) {
         let mut signals = self.value_signals.lock().unwrap();
-        signals.insert(name + &self.selected_object_id.to_string(), signal);
+        signals.insert(name + &selected_object_id, signal);
     }
 
     // pub fn update_width(&mut self, new_width_str: &str) -> Result<(), String> {
@@ -180,7 +182,8 @@ pub struct StateHelper {
     pub file_signals: Arc<Mutex<HashMap<String, Arc<UnboundedSender<UIMessage>>>>>,
     pub object_selected_signal: Option<RwSignal<bool>>,
     pub selected_object_id_signal: Option<RwSignal<Uuid>>,
-    pub selected_object_data_signal: Option<RwSignal<ObjectConfig>>,
+    // pub selected_object_data_signal: Option<RwSignal<ObjectConfig>>,
+    pub selected_object_data_signal: Option<RwSignal<ComponentData>>,
 }
 
 #[derive(Clone, Debug)]
