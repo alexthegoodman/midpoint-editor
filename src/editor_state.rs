@@ -190,7 +190,8 @@ pub struct StateHelper {
 pub enum UIMessage {
     UpdateTextures(Vec<File>),
     AddTexture(File),
-    // ... other UI updates
+    UpdateConcepts(Vec<File>),
+    AddConcept(File),
 }
 
 impl StateHelper {
@@ -212,6 +213,16 @@ impl StateHelper {
     pub fn register_file_signal(&mut self, name: String, signal: Arc<UnboundedSender<UIMessage>>) {
         let mut signals = self.file_signals.lock().unwrap();
         signals.insert(name, signal);
+    }
+
+    pub fn save_current_saved_state(&mut self) {
+        let saved_state = self
+            .saved_state
+            .as_ref()
+            .expect("Couldn't get Saved State")
+            .lock()
+            .unwrap();
+        self.save_saved_state(saved_state);
     }
 
     pub fn save_saved_state(&self, saved_state: MutexGuard<SavedState>) {

@@ -5,7 +5,7 @@ use directories::BaseDirs;
 
 use super::utilities::get_common_os_dir;
 
-fn save_concept(
+pub fn save_concept(
     // state: tauri::State<'_, AppState>,
     projectId: String,
     conceptBase64: String,

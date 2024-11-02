@@ -72,7 +72,34 @@ impl ezsockets::ClientExt for WebSocketClient {
             if (command_data.command == "add_model") {
                 saved_state.models.push(new_file);
             } else if (command_data.command == "add_concept") {
-                saved_state.concepts.push(new_file);
+                saved_state.concepts.push(new_file.clone());
+
+                println!("Updating signal...");
+
+                let concept_browser_signal = file_signals
+                    .lock()
+                    .unwrap()
+                    .get("concept_browser")
+                    .cloned()
+                    .expect("Couldn't get concept browser file signal");
+
+                // let new_concepts = saved_state.concepts.to_vec();
+
+                let tx = Arc::clone(&concept_browser_signal);
+                tokio::spawn(async move {
+                    // Process in another thread, then send update
+                    println!("send tx");
+                    tx.send(UIMessage::AddConcept(new_file.clone())).unwrap();
+                });
+
+                drop(saved_state);
+                drop(state_helper);
+
+                let mut state_helper = self.state_helper.lock().unwrap();
+                state_helper.save_current_saved_state();
+                drop(state_helper);
+
+                println!("Texture Finished!");
             } else if (command_data.command == "add_landscape_heightmap") {
                 let mut landscape = saved_state
                     .landscapes
@@ -108,11 +135,6 @@ impl ezsockets::ClientExt for WebSocketClient {
                     .push(new_file.clone());
 
                 println!("Updating signal...");
-                // let mut named_signals = named_signals.lock().unwrap();
-
-                // let texture_browser_signal = named_signals
-                //     .texture_browser
-                //     .expect("Couldn't get texture browser signal");
 
                 let texture_browser_signal = file_signals
                     .lock()
@@ -127,41 +149,6 @@ impl ezsockets::ClientExt for WebSocketClient {
                     .expect("Couldn't get saved textures")
                     .to_vec();
 
-                // println!("Signal value before: {:?}", texture_browser_signal.get());
-
-                // println!("Almost done: {:?}", new_textures);
-
-                // texture_browser_signal.set(new_textures);
-                // texture_browser_signal.update(move |t| t.push(new_file.clone()));
-                // RUNTIME.with(|r| {
-                //     r.batching.set(true);
-                //     texture_browser_signal.update(move |t| t.push(new_file.clone()));
-                //     r.batching.set(false);
-                //     r.run_pending_effects();
-                // });
-
-                // (self.on_message)(
-                //     "file_signals".to_string(),
-                //     "texture_browser".to_string(),
-                //     new_textures,
-                // );
-
-                // let mut state_helper = state_helper.lock().unwrap();
-                // let file_signals = Arc::clone(&state_helper.file_signals);
-
-                // let texture_browser_signal = state_helper
-                //     .file_signals
-                //     .lock()
-                //     .unwrap()
-                //     .get("texture_browser")
-                //     .cloned()
-                //     .expect("Couldn't get texture browser file signal");
-                // let texture_browser_signal = texture_browser_signal.lock().unwrap();
-
-                // println!("unlocked signal {:?}", texture_browser_signal.get());
-
-                // texture_browser_signal.set(signal_value);
-
                 let tx = Arc::clone(&texture_browser_signal);
                 tokio::spawn(async move {
                     // Process in another thread, then send update
@@ -170,6 +157,10 @@ impl ezsockets::ClientExt for WebSocketClient {
                 });
 
                 drop(saved_state);
+                drop(state_helper);
+
+                let mut state_helper = self.state_helper.lock().unwrap();
+                state_helper.save_current_saved_state();
                 drop(state_helper);
 
                 println!("Texture Finished!");

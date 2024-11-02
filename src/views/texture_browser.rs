@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
+use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::ext_event::create_signal_from_tokio_channel;
 use midpoint_engine::floem::reactive::SignalGet;
@@ -9,9 +10,10 @@ use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, RwSignal
 use midpoint_engine::floem::taffy::{FlexDirection, FlexWrap};
 use midpoint_engine::floem::views::h_stack;
 use midpoint_engine::floem::views::text_input;
-use midpoint_engine::floem::views::{container, dyn_container, dyn_stack, empty, label, scroll, v_stack};
+use midpoint_engine::floem::views::{
+    container, dyn_container, dyn_stack, empty, label, scroll, v_stack,
+};
 use midpoint_engine::floem::IntoView;
-use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::helpers::saved_data::File;
 use tokio::spawn;
 use uuid::Uuid;
@@ -64,6 +66,7 @@ pub fn texture_browser(
             match msg {
                 UIMessage::UpdateTextures(textures) => texture_data.set(textures),
                 UIMessage::AddTexture(file) => texture_data.update(|t| t.push(file)),
+                _ => return,
             }
         }
     });
@@ -96,10 +99,10 @@ pub fn texture_browser(
         }
     });
 
-    create_effect(move |_| {
-        let textures = texture_data.get();
-        println!("Texture signal updated: {:?}", textures);
-    });
+    // create_effect(move |_| {
+    //     let textures = texture_data.get();
+    //     println!("Texture signal updated: {:?}", textures);
+    // });
 
     v_stack((
         h_stack((
