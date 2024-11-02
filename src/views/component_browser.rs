@@ -68,7 +68,20 @@ pub fn component_item(
                     renderer_state.object_selected_kind = component_data.kind.clone();
                     renderer_state.object_selected_data = Some(component_data.clone());
 
-                    // gizmo displays automatically
+                    // gizmo displays automatically (but need to update gizmo position)
+                    let component_data = component_data.clone();
+                    renderer_state
+                        .gizmo
+                        .transform
+                        .update_position(component_data.generic_properties.position);
+                    // don't forget the rapier positions
+                    // let arrows = &renderer_state.gizmo.arrows;
+                    // let cloned_arrows = [renderer_state.gizmo.arrows[0]]
+
+                    renderer_state.update_arrow_collider_position(
+                        // arrows,
+                        component_data.generic_properties.position,
+                    );
                 }
             },
             active,

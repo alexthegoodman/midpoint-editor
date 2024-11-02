@@ -193,15 +193,14 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         render_pass.set_bind_group(1, &engine.gizmo.bind_group, &[]);
                         render_pass.set_bind_group(2, &engine.gizmo.texture_bind_group, &[]);
 
-                        render_pass.set_vertex_buffer(0, engine.gizmo.vertex_buffer.slice(..));
-                        render_pass.set_index_buffer(
-                            engine.gizmo.index_buffer.slice(..),
-                            wgpu::IndexFormat::Uint32,
-                        );
-
-                        // println!("engine.gizmo.num_indices {:?}", engine.gizmo.num_indices);
-
-                        render_pass.draw_indexed(0..engine.gizmo.num_indices, 0, 0..1);
+                        engine.gizmo.arrows.iter().for_each(|arrow| {
+                            render_pass.set_vertex_buffer(0, arrow.vertex_buffer.slice(..));
+                            render_pass.set_index_buffer(
+                                arrow.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint32,
+                            );
+                            render_pass.draw_indexed(0..arrow.index_count, 0, 0..1);
+                        });
                     }
 
                     // draw utility grids
@@ -331,17 +330,10 @@ fn handle_cursor_moved(
 
             // Only update camera if right mouse button is pressed
             if renderer_state.mouse_state.right_mouse_pressed {
-                // editor_state.update_camera_rotation(dx as f32, dy as f32);
                 handle_mouse_move(dx as f32, dy as f32);
             }
 
             // create constant raycast
-            // let ray = create_ray_from_mouse(
-            //     (position_x as f32, position_y as f32),
-            //     camera,
-            //     viewport.width as u32,
-            //     viewport.height as u32,
-            // );
             let ray = renderer_state.update_rays(
                 (position_x as f32, position_y as f32),
                 camera,
@@ -356,8 +348,11 @@ fn handle_cursor_moved(
                 renderer_state.mouse_state.is_dragging = true;
             }
             if (renderer_state.mouse_state.drag_started || renderer_state.mouse_state.is_dragging) {
-                if renderer_state.object_selected.is_some() {
+                if renderer_state.object_selected.is_some() && renderer_state.ray_intersecting {
                     println!("Dragging while component selected!");
+
+                    let dx = dx * 0.005;
+                    let dy = dy * 0.005;
 
                     // get component from saved state
                     let state_helper = state_helper.lock().unwrap();
@@ -366,7 +361,7 @@ fn handle_cursor_moved(
                         .as_ref()
                         .expect("Couldn't get saved state");
                     let saved_state = saved_state.lock().unwrap();
-                    let component = saved_state
+                    let selected_component = saved_state
                         .levels
                         .as_ref()
                         .expect("Couldn't get levels")
@@ -386,66 +381,157 @@ fn handle_cursor_moved(
 
                     let mouse_state = renderer_state.mouse_state.clone();
 
-                    // let savable_transform =
-                    //     renderer_state
-                    //         .gizmo
-                    //         .update_transform(&camera, &component, mouse_state);
+                    let ray_arrow = renderer_state.gizmo.arrows.iter().find(|a| {
+                        a.id == renderer_state
+                            .ray_component_id
+                            .expect("Couldn't get ray component")
+                    });
 
-                    // if savable_transform.is_some() {
-                    //     let savable_transform =
-                    //         savable_transform.expect("Couldn't get savable_transform");
+                    let ray_component = saved_state
+                        .levels
+                        .as_ref()
+                        .expect("Couldn't get levels")
+                        .get(0)
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_ref()
+                        .expect("Couldn't get components")
+                        .iter()
+                        .find(|c| {
+                            c.id == renderer_state
+                                .ray_component_id
+                                .expect("Couldn't get ray component")
+                                .to_string()
+                        });
 
-                    //     let mut component_data = component.clone();
+                    if ray_arrow.is_some() {
+                        let ray_arrow = ray_arrow.expect("Couldn't get ray arrow");
+                        println!("Ray intersection! {:?}", ray_arrow.axis);
+                        let current_transform = match selected_component.kind.as_ref().unwrap() {
+                            ComponentKind::Model => {
+                                let model = renderer_state
+                                    .models
+                                    .iter()
+                                    .find(|m| m.id == selected_component.id)
+                                    .expect("Couldn't find matching model");
+                                // Assuming first mesh's transform represents the whole model
+                                let mesh = &model.meshes[0];
+                                [
+                                    mesh.transform.position,
+                                    mesh.transform.rotation,
+                                    mesh.transform.scale,
+                                ]
+                            }
+                            ComponentKind::Landscape => {
+                                let landscape = renderer_state
+                                    .landscapes
+                                    .iter()
+                                    .find(|m| m.id == selected_component.id)
+                                    .expect("Couldn't find matching landscape");
+                                [
+                                    landscape.transform.position,
+                                    landscape.transform.rotation,
+                                    landscape.transform.scale,
+                                ]
+                            }
+                        };
 
-                    //     // TODO: update saved_state with new ComponentData (actually saved on mouse release)
+                        // Calculate movement based on axis constraint
+                        let movement = match ray_arrow.axis {
+                            0 => [dx as f32, 0.0, 0.0],       // X axis only
+                            1 => [0.0, dy as f32, 0.0],       // Y axis only
+                            2 => [0.0, 0.0, dx as f32],       // Z axis only
+                            _ => [dx as f32, dy as f32, 0.0], // Unconstrained (shouldn't happen with gizmo)
+                        };
 
-                    //     // TODO: update renderer_state.selected_object_data with new ComponentData
-                    //     component_data.generic_properties.position = savable_transform[0];
-                    //     component_data.generic_properties.rotation = savable_transform[1];
-                    //     component_data.generic_properties.scale = savable_transform[2];
+                        // Create the new transform with the constrained movement
+                        let savable_transform: Option<[[f32; 3]; 3]> = Some([
+                            [
+                                current_transform[0][0] + movement[0],
+                                current_transform[0][1] - movement[1],
+                                current_transform[0][2] - movement[2],
+                            ],
+                            current_transform[1].into(), // Keep rotation unchanged
+                            current_transform[2].into(), // Keep scale unchanged
+                        ]);
 
-                    //     renderer_state.object_selected_data = Some(component_data);
+                        if savable_transform.is_some() {
+                            let savable_transform: [[f32; 3]; 3] =
+                                savable_transform.expect("Couldn't get savable_transform");
 
-                    //     // TODO: update signals
+                            let mut component_data = selected_component.clone();
 
-                    //     // check object_type and set new transform in rendererstate
-                    //     match component
-                    //         .kind
-                    //         .as_ref()
-                    //         .expect("Couldn't get component kind")
-                    //     {
-                    //         ComponentKind::Model => {
-                    //             let mut matching_model = renderer_state
-                    //                 .models
-                    //                 .iter_mut()
-                    //                 .find(|m| m.id == component.id)
-                    //                 .expect("Couldn't find matching model");
+                            // TODO: update saved_state with new ComponentData (actually saved on mouse release)
 
-                    //             matching_model.meshes.iter_mut().for_each(move |mesh| {
-                    //                 mesh.transform.update_position(savable_transform[0]);
-                    //                 mesh.transform.update_rotation(savable_transform[1]);
-                    //                 mesh.transform.update_scale(savable_transform[2]);
-                    //             });
-                    //         }
-                    //         ComponentKind::Landscape => {
-                    //             let mut matching_landscape = renderer_state
-                    //                 .landscapes
-                    //                 .iter_mut()
-                    //                 .find(|m| m.id == component.id)
-                    //                 .expect("Couldn't find matching landscape");
+                            // TODO: update signals
 
-                    //             matching_landscape
-                    //                 .transform
-                    //                 .update_position(savable_transform[0]);
-                    //             matching_landscape
-                    //                 .transform
-                    //                 .update_rotation(savable_transform[1]);
-                    //             matching_landscape
-                    //                 .transform
-                    //                 .update_scale(savable_transform[2]);
-                    //         }
-                    //     }
-                    // }
+                            // update gizmo transform position
+                            renderer_state
+                                .gizmo
+                                .transform
+                                .update_position(savable_transform[0]);
+
+                            // update_arrow_collider_position
+                            renderer_state.update_arrow_collider_position(savable_transform[0]);
+
+                            // update renderer_state.selected_object_data with new ComponentData
+                            component_data.generic_properties.position = savable_transform[0];
+                            component_data.generic_properties.rotation = savable_transform[1];
+                            component_data.generic_properties.scale = savable_transform[2];
+
+                            renderer_state.object_selected_data = Some(component_data);
+
+                            // check object_type and set new transform in rendererstate
+                            match selected_component
+                                .kind
+                                .as_ref()
+                                .expect("Couldn't get component kind")
+                            {
+                                ComponentKind::Model => {
+                                    let mut matching_model = renderer_state
+                                        .models
+                                        .iter_mut()
+                                        .find(|m| m.id == selected_component.id)
+                                        .expect("Couldn't find matching model");
+
+                                    println!(
+                                        "Update transforms! {:?} {:?}",
+                                        current_transform[0], savable_transform[0]
+                                    );
+
+                                    // update visually
+                                    matching_model.meshes.iter_mut().for_each(move |mesh| {
+                                        mesh.transform.update_position(savable_transform[0]);
+                                        mesh.transform.update_rotation(savable_transform[1]);
+                                        mesh.transform.update_scale(savable_transform[2]);
+                                    });
+
+                                    // update colliders
+                                }
+                                ComponentKind::Landscape => {
+                                    let mut matching_landscape = renderer_state
+                                        .landscapes
+                                        .iter_mut()
+                                        .find(|m| m.id == selected_component.id)
+                                        .expect("Couldn't find matching landscape");
+
+                                    matching_landscape
+                                        .transform
+                                        .update_position(savable_transform[0]);
+                                    matching_landscape
+                                        .transform
+                                        .update_rotation(savable_transform[1]);
+                                    matching_landscape
+                                        .transform
+                                        .update_scale(savable_transform[2]);
+                                }
+                            }
+                        }
+                    }
+
+                    if ray_component.is_some() {
+                        println!("Component intersection...");
+                    }
                 }
             }
         },
@@ -1093,7 +1179,7 @@ async fn main() {
 
                 println!("Initialized...");
 
-                let state = RendererState::new(
+                let mut state = RendererState::new(
                     viewport_2.clone(),
                     &gpu_resources.device,
                     &gpu_resources.queue,
@@ -1109,6 +1195,8 @@ async fn main() {
                     camera_bind_group_layout.clone(),
                 )
                 .await;
+
+                state.add_arrow_colliders();
 
                 let renderer_state = Arc::new(Mutex::new(state));
 
