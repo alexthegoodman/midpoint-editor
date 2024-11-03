@@ -32,6 +32,7 @@ use super::audio::audio_view;
 use super::concepts::concepts_view;
 use super::editor_settings::editor_settings;
 use super::map::maps_view;
+use super::nodes::node_canvas;
 use super::performance::performance_view;
 use super::project_browser::project_browser;
 use super::project_settings::project_settings;
@@ -54,6 +55,7 @@ pub fn project_tab_interface(
 
     let tabs: im::Vector<&str> = vec![
         "Scene",
+        "Nodes",
         "Concepts",
         "Map",
         "Story",
@@ -82,6 +84,7 @@ pub fn project_tab_interface(
                 let icon_name = match item {
                     "Concepts" => "panorama",
                     "Scene" => "cube",
+                    "Nodes" => "cube",
                     "Map" => "map",
                     "Story" => "book",
                     "Audio" => "faders",
@@ -92,6 +95,7 @@ pub fn project_tab_interface(
                 let destination_view = match item {
                     "Concepts" => "concepts",
                     "Scene" => "scene",
+                    "Nodes" => "nodes",
                     "Map" => "map",
                     "Story" => "story",
                     "Audio" => "audio",
@@ -205,6 +209,7 @@ pub fn project_tab_interface(
                                 scene_view(state_2.clone(), gpu_helper.clone(), viewport.clone())
                                     .into_any()
                             }
+                            "Nodes" => node_canvas().into_any(),
                             "Map" => maps_view(gpu_helper.clone(), viewport.clone()).into_any(),
                             "Story" => story_view(gpu_helper.clone(), viewport.clone()).into_any(),
                             "Audio" => audio_view(gpu_helper.clone(), viewport.clone()).into_any(),

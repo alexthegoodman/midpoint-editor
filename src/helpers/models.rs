@@ -4,7 +4,7 @@ use base64::decode;
 
 use super::utilities::get_common_os_dir;
 
-fn save_model(
+pub fn save_model(
     // state: tauri::State<'_, AppState>,
     projectId: String,
     modelBase64: String,

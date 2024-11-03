@@ -192,6 +192,8 @@ pub enum UIMessage {
     AddTexture(File),
     UpdateConcepts(Vec<File>),
     AddConcept(File),
+    UpdateModels(Vec<File>),
+    AddModel(File),
 }
 
 impl StateHelper {
@@ -222,17 +224,21 @@ impl StateHelper {
             .expect("Couldn't get Saved State")
             .lock()
             .unwrap();
-        self.save_saved_state(saved_state);
+        let renderer_state = self
+            .renderer_state
+            .as_ref()
+            .expect("Couldn't get RendererState");
+        let renderer_state = renderer_state.lock().unwrap();
+        let project_id = renderer_state
+            .project_selected
+            .expect("Couldn't get project id");
+        self.save_saved_state(project_id, saved_state);
     }
 
-    pub fn save_saved_state(&self, saved_state: MutexGuard<SavedState>) {
+    pub fn save_saved_state(&self, project_id: Uuid, saved_state: MutexGuard<SavedState>) {
         let json = serde_json::to_string_pretty(&saved_state.to_owned())
             .expect("Couldn't serialize saved state");
         let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
-        let project_id = self
-            .project_selected_signal
-            .expect("Couldn't get project signal")
-            .get();
         let save_path = sync_dir
             .join("midpoint")
             .join("projects")
@@ -243,6 +249,7 @@ impl StateHelper {
 
         fs::write(&save_path, json).expect("Couldn't write saved state");
 
+        drop(saved_state);
         println!("Saved!");
     }
 }

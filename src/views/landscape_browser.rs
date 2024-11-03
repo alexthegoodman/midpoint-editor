@@ -125,7 +125,12 @@ pub fn landscape_item(
                         .get_or_insert_with(Vec::new)
                         .push(landscape_component.clone());
 
-                    state_helper.save_saved_state(saved_state);
+                    let project_id = state_helper
+                        .project_selected_signal
+                        .expect("Couldn't get project signal")
+                        .get();
+
+                    state_helper.save_saved_state(project_id, saved_state);
 
                     // drop(saved_state);
 

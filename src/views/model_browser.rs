@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use super::shared::dynamic_img;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
+use midpoint_engine::floem::ext_event::create_signal_from_tokio_channel;
 use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, RwSignal, SignalUpdate};
 use midpoint_engine::floem::taffy::{FlexDirection, FlexWrap};
@@ -21,7 +22,7 @@ use wgpu::util::DeviceExt;
 use midpoint_engine::floem::views::Decorators;
 use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
-use crate::editor_state::{EditorState, StateHelper};
+use crate::editor_state::{EditorState, StateHelper, UIMessage};
 
 // type BoxedAsyncFn = Box<dyn Fn() -> Pin<Box<dyn Future<Output = String> + Send>> + Send + Sync>;
 
@@ -70,6 +71,11 @@ pub fn model_item(
                         filename.clone(),
                     );
 
+                    // create physics
+                    let mut renderer_state = renderer_state.lock().unwrap();
+                    renderer_state
+                        .add_collider(component_id.to_string().clone(), ComponentKind::Model);
+
                     // update saved data
                     let mut saved_state = state_helper
                         .saved_state
@@ -100,7 +106,12 @@ pub fn model_item(
                         .get_or_insert_with(Vec::new)
                         .push(model_component);
 
-                    state_helper.save_saved_state(saved_state);
+                    let project_id = state_helper
+                        .project_selected_signal
+                        .expect("Couldn't get project signal")
+                        .get();
+
+                    state_helper.save_saved_state(project_id, saved_state);
                 }
             },
             active,
@@ -114,20 +125,42 @@ pub fn model_browser(
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
-    let model_data: RwSignal<Vec<File>> = create_rw_signal(Vec::new());
-
     let state_2 = Arc::clone(&state_helper);
     let gpu_2 = Arc::clone(&gpu_helper);
 
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let tx = Arc::new(tx);
+    let model_data: RwSignal<Vec<File>> = create_rw_signal(Vec::new());
+    let update_signal = create_signal_from_tokio_channel(rx);
+
+    // Handle updates in UI thread
     create_effect(move |_| {
-        let state_helper = state_helper.lock().unwrap();
-        let saved_state = state_helper
-            .saved_state
-            .as_ref()
-            .expect("Couldn't get saved state")
-            .lock()
-            .unwrap();
-        model_data.set(saved_state.models.clone());
+        if let Some(msg) = update_signal.get() {
+            match msg {
+                UIMessage::UpdateModels(models) => model_data.set(models),
+                UIMessage::AddModel(file) => model_data.update(|t| t.push(file)),
+                _ => return,
+            }
+        }
+    });
+
+    create_effect({
+        let tx = tx.clone();
+        move |_| {
+            let tx = tx.clone();
+            let mut state_helper = state_helper.lock().unwrap();
+
+            state_helper.register_file_signal("model_browser".to_string(), tx);
+
+            let saved_state = state_helper
+                .saved_state
+                .as_ref()
+                .expect("Couldn't get saved state")
+                .lock()
+                .unwrap();
+
+            model_data.set(saved_state.models.clone());
+        }
     });
 
     container((scroll(

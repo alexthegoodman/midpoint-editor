@@ -61,3 +61,9 @@ pub fn parse_ws_command(json: &str) -> Result<Command, serde_json::Error> {
         }
     }
 }
+
+pub fn change_extension_to_glb(filename: &str) -> String {
+    let mut path = PathBuf::from(filename);
+    path.set_extension("glb");
+    path.to_string_lossy().into_owned()
+}

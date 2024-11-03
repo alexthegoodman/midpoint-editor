@@ -26,18 +26,104 @@ use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 use crate::editor_state::UIMessage;
 use crate::editor_state::{EditorState, StateHelper};
 use crate::gql::generateConcept::generate_concept;
+use crate::gql::generateModel::generate_model;
 use crate::gql::generateTexture::generate_texture;
 use crate::helpers::auth::read_auth_token;
 use crate::helpers::concepts::save_concept;
+use crate::helpers::models::save_model;
 use crate::helpers::textures::save_texture;
+use crate::helpers::utilities::change_extension_to_glb;
 use crate::helpers::utilities::get_filename;
 
-pub fn concept_item(image_path: String, label_text: String) -> impl View {
+pub fn concept_item(
+    state_helper: Arc<Mutex<StateHelper>>,
+    gpu_helper: Arc<Mutex<GpuHelper>>,
+    image_path: String,
+    label_text: String,
+    image_url: String,
+    concept_id: String,
+) -> impl View {
+    let generate_active = create_rw_signal(false);
+    let generate_disabled = create_rw_signal(false);
+
+    let (btn_disabled_tx, btn_disabled_rx) = tokio::sync::mpsc::unbounded_channel();
+    let btn_disabled_tx = Arc::new(btn_disabled_tx);
+    let btn_disabled_update_signal = create_signal_from_tokio_channel(btn_disabled_rx);
+
+    create_effect(move |_| {
+        if let Some(btn_disabled) = btn_disabled_update_signal.get() {
+            generate_disabled.set(btn_disabled);
+        }
+    });
+
     v_stack(
         ((
-            dynamic_img(image_path, label_text.clone())
+            dynamic_img(image_path.clone(), label_text.clone())
                 .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
-            label(move || label_text.clone()),
+            label({
+                let label_text = label_text.clone();
+                move || label_text.clone()
+            }),
+            small_button(
+                "Generate Model",
+                "plus",
+                {
+                    let image_path = image_path.clone();
+                    let image_url = image_url.clone();
+                    // let label_text = label_text.clone();
+
+                    move |_| {
+                        let image_path = image_path.clone();
+                        let label_text = label_text.clone();
+                        let image_url = image_url.clone();
+                        let state_helper = state_helper.lock().unwrap();
+                        let btn_disabled_tx = btn_disabled_tx.clone();
+
+                        println!("Preparing generation...");
+
+                        generate_disabled.set(true);
+
+                        // Get the data you need before spawning
+                        let renderer_state = state_helper
+                            .renderer_state
+                            .as_ref()
+                            .expect("Couldn't get RendererState")
+                            .lock()
+                            .unwrap();
+                        let selected_project_id = renderer_state
+                            .project_selected
+                            .as_ref()
+                            .expect("Couldn't get current project")
+                            .to_string();
+
+                        // Use the runtime handle to spawn
+                        tokio::runtime::Handle::current().spawn(async move {
+                            // Now we can safely use generate_field inside async block
+                            let auth_token = read_auth_token();
+
+                            println!("Generating model... {:?}", auth_token,);
+
+                            let model_data = generate_model(auth_token, image_url).await;
+                            let modelBase64 = model_data
+                                .expect("Couldn't unwrap model data")
+                                .generateModel;
+
+                            println!("Saving...");
+                            // save texture to sync directory (to be uploaded to S3)
+                            let modelFilename = change_extension_to_glb(&label_text);
+
+                            save_model(selected_project_id, modelBase64, modelFilename);
+
+                            // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
+                            println!("Syncing...");
+
+                            btn_disabled_tx.send(false).unwrap();
+                        });
+                    }
+                },
+                generate_active,
+            )
+            .disabled(move || generate_disabled.get()),
         )),
     )
     .style(|s| s.width(120.0))
@@ -49,6 +135,7 @@ pub fn concepts_view(
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
     let state_2 = Arc::clone(&state_helper);
+    let state_3 = Arc::clone(&state_helper);
 
     let generate_field = create_rw_signal("".to_string());
     let generate_active = create_rw_signal(false);
@@ -184,7 +271,14 @@ pub fn concepts_view(
                     move |concept_data| concept_data.id.clone(),
                     move |concept_data_real| {
                         let current_concepts = concept_data.get(); // Add this to ensure reactivity
-                        concept_item(concept_data_real.normalFilePath, concept_data_real.fileName)
+                        concept_item(
+                            state_3.clone(),
+                            gpu_helper.clone(),
+                            concept_data_real.normalFilePath,
+                            concept_data_real.fileName,
+                            concept_data_real.cloudfrontUrl,
+                            concept_data_real.id,
+                        )
                     },
                 )
                 .into_view()

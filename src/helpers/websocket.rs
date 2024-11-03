@@ -70,7 +70,33 @@ impl ezsockets::ClientExt for WebSocketClient {
             };
 
             if (command_data.command == "add_model") {
-                saved_state.models.push(new_file);
+                saved_state.models.push(new_file.clone());
+
+                println!("Updating signal...");
+
+                let model_browser_signal =
+                    file_signals.lock().unwrap().get("model_browser").cloned();
+
+                if (model_browser_signal.is_some()) {
+                    let model_browser_signal =
+                        model_browser_signal.expect("Couldn't get concept browser file signal");
+
+                    let tx = Arc::clone(&model_browser_signal);
+                    tokio::spawn(async move {
+                        // Process in another thread, then send update
+                        println!("send model tx");
+                        tx.send(UIMessage::AddModel(new_file.clone())).unwrap();
+                    });
+                }
+
+                drop(saved_state);
+                drop(state_helper);
+
+                let mut state_helper = self.state_helper.lock().unwrap();
+                state_helper.save_current_saved_state();
+                drop(state_helper);
+
+                println!("Model Finished!");
             } else if (command_data.command == "add_concept") {
                 saved_state.concepts.push(new_file.clone());
 
@@ -83,8 +109,6 @@ impl ezsockets::ClientExt for WebSocketClient {
                     .cloned()
                     .expect("Couldn't get concept browser file signal");
 
-                // let new_concepts = saved_state.concepts.to_vec();
-
                 let tx = Arc::clone(&concept_browser_signal);
                 tokio::spawn(async move {
                     // Process in another thread, then send update
@@ -95,11 +119,13 @@ impl ezsockets::ClientExt for WebSocketClient {
                 drop(saved_state);
                 drop(state_helper);
 
+                println!("Attempt saving of saved state...");
+
                 let mut state_helper = self.state_helper.lock().unwrap();
                 state_helper.save_current_saved_state();
                 drop(state_helper);
 
-                println!("Texture Finished!");
+                println!("Concept Finished!");
             } else if (command_data.command == "add_landscape_heightmap") {
                 let mut landscape = saved_state
                     .landscapes

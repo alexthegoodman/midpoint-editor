@@ -17,3 +17,4 @@ pub mod scene;
 pub mod shared;
 pub mod story;
 pub mod texture_browser;
+pub mod nodes;
