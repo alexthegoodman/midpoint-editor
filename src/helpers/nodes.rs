@@ -1,7 +1,155 @@
+use midpoint_engine::floem::peniko::Color;
+use nalgebra_glm::Vec2;
+
+// Node components would also benefit from signals for dynamic properties
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NodeComponent {
+    pub id: String,
+    pub title: String,
+    pub node_type: NodeType,
+    // pub node_inputs: NodeInputs,
+    // pub node_outputs: NodeOutputs,
+    pub ui_inputs: Vec<Port>,
+    pub ui_outputs: Vec<Port>,
+    pub parent: Option<String>,
+    pub children: Vec<String>,
+    pub initial_position: [u32; 2],
+}
+
+impl NodeComponent {
+    pub fn new(id: String, node_type: NodeType, position: Vec2) -> Self {
+        Self {
+            id,
+            title: String::new(),
+            node_type,
+            // node_inputs,
+            ui_inputs: Vec::new(),
+            ui_outputs: Vec::new(),
+            parent: None,
+            children: Vec::new(),
+            initial_position: [0, 0],
+        }
+    }
+}
+
+impl NodeComponent {
+    pub fn get_type_color(&self) -> Color {
+        match self.node_type {
+            // raw
+            NodeType::DataType { .. } => Color::CADET_BLUE,
+            NodeType::Boolean { .. } => Color::CADET_BLUE,
+            NodeType::Integer { .. } => Color::CADET_BLUE,
+            NodeType::Float { .. } => Color::CADET_BLUE,
+            NodeType::String { .. } => Color::CADET_BLUE,
+            NodeType::Vector2 { .. } => Color::CADET_BLUE,
+            NodeType::Vector3 { .. } => Color::CADET_BLUE,
+            NodeType::Color { .. } => Color::CADET_BLUE,
+            NodeType::Entity { .. } => Color::CADET_BLUE,
+
+            // data
+            NodeType::ReactiveState { .. } => Color::CHARTREUSE,
+            NodeType::Array { .. } => Color::CHARTREUSE,
+            NodeType::Dictionary { .. } => Color::CHARTREUSE,
+            // control flow
+            NodeType::Effect { .. } => Color::GREEN,
+            NodeType::Event { .. } => Color::GREEN,
+            NodeType::Conditional { .. } => Color::GREEN,
+            NodeType::Loop { .. } => Color::GREEN,
+            NodeType::Gate { .. } => Color::GREEN,
+            NodeType::Sequence { .. } => Color::GREEN,
+            // render
+            NodeType::Render { .. } => Color::RED,
+            NodeType::Camera { .. } => Color::RED,
+            NodeType::UI { .. } => Color::RED,
+            NodeType::UIElementType { .. } => Color::RED,
+            NodeType::Style { .. } => Color::RED,
+            // operations
+            NodeType::MathOp { .. } => Color::YELLOW,
+            NodeType::VectorOp { .. } => Color::YELLOW,
+            NodeType::StringOp { .. } => Color::YELLOW,
+            NodeType::PhysicsOp { .. } => Color::YELLOW,
+            NodeType::AnimationOp { .. } => Color::YELLOW,
+            NodeType::AudioOp { .. } => Color::YELLOW,
+            // systems
+            NodeType::Behavior { .. } => Color::BLACK,
+            NodeType::Spawner { .. } => Color::BLACK,
+            NodeType::Collision { .. } => Color::BLACK,
+            NodeType::Timer { .. } => Color::BLACK,
+            NodeType::GameState { .. } => Color::BLACK,
+        }
+    }
+}
+
+// Port system using labels instead of paths
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Port {
+    pub id: String,
+    pub input_name: Option<String>, // corresponds to input_nodes which hold live state
+    pub display_name: String,
+    pub connected_to: Option<String>, // ID of connected port
+    // pub connection_type: NodeType,
+    pub is_output: bool,
+}
+
+// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+// pub enum PortType {
+//     State,
+//     Effect,
+//     // etc
+// }
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NodeType {
+    DataType,
+    Boolean,
+    Integer,
+    Float,
+    String,
+    Vector2,
+    Vector3,
+    Color,
+    Entity,
+    ReactiveState,
+    Array,
+    Dictionary,
+    Effect,
+    Event,
+    Conditional,
+    Loop,
+    Gate,
+    Sequence,
+    Render,
+    Camera,
+    UI,
+    UIElementType,
+    MathOp,
+    VectorOp,
+    StringOp,
+    PhysicsOp,
+    AnimationOp,
+    AudioOp,
+    Behavior,
+    Spawner,
+    Collision,
+    Timer,
+    GameState,
+    Style,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum NodeInputs {
+    // Raw nodes
+    // Boolean,
+    // Integer,
+    // Float,
+    // String,
+    // Vector2,
+    // Vector3,
+    // Color,
+    // Entity,
+
     // Data Nodes
-    State {
+    ReactiveState {
         name: String,
         data_type: DataType,
         value: String,    // Serialized value

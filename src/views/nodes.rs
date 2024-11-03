@@ -5,6 +5,7 @@ use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::SignalUpdate;
 use midpoint_engine::floem::reactive::*;
 use midpoint_engine::floem::style::CursorStyle;
+use midpoint_engine::floem::taffy::FlexDirection;
 use midpoint_engine::floem::taffy::Position;
 use midpoint_engine::floem::unit::Pct;
 use midpoint_engine::floem::unit::Px;
@@ -20,7 +21,10 @@ use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 use nalgebra::Vector2;
 use nalgebra_glm::Vec2;
 
+use crate::helpers::nodes::NodeComponent;
+use crate::helpers::nodes::NodeInputs;
 use crate::helpers::nodes::NodeType;
+use crate::helpers::nodes::Port;
 
 struct NodeCanvas {
     offset: RwSignal<Vec2>,
@@ -44,28 +48,33 @@ pub fn node_ports(
             (move |port| {
                 let left = left.clone();
                 let display_name_2 = port.display_name.clone();
-                let connected_to = port
-                    .connected_to
-                    .as_ref()
-                    .expect("Couldn't get connected_to");
+                let connected_to = port.connected_to;
+
                 let all_nodes = all_nodes.get();
-                let connected_to_port = if port.is_output {
-                    all_nodes
-                        .iter()
-                        .find_map(|n| n.inputs.iter().find(|i| i.id == *connected_to).cloned())
+                let connected_to_port = if connected_to.is_some() {
+                    let connected_to = connected_to.as_ref().expect("Couldn't get connected_to");
+                    if port.is_output {
+                        all_nodes.iter().find_map(|n| {
+                            n.ui_inputs.iter().find(|i| i.id == *connected_to).cloned()
+                        })
+                    } else {
+                        all_nodes.iter().find_map(|n| {
+                            n.ui_outputs.iter().find(|i| i.id == *connected_to).cloned()
+                        })
+                    }
                 } else {
-                    all_nodes
-                        .iter()
-                        .find_map(|n| n.outputs.iter().find(|i| i.id == *connected_to).cloned())
+                    None
                 };
 
                 h_stack((
                     if left {
                         empty().into_any()
                     } else {
-                        label(move || port.display_name.clone()).into_any()
+                        label(move || port.display_name.clone())
+                            .style(|s| s.selectable(false))
+                            .into_any()
                     },
-                    if port.connected_to.is_some() && connected_to_port.is_some() {
+                    if connected_to_port.is_some() {
                         label(move || {
                             format!(
                                 "{}",
@@ -77,20 +86,28 @@ pub fn node_ports(
                         })
                         .style({
                             let node = node.clone();
-                            move |s| s.background(node.get_type_color()).margin_bottom(2.0)
+                            move |s| {
+                                s.background(node.get_type_color())
+                                    .color(Color::WHITE_SMOKE)
+                                    .margin_bottom(2.0)
+                            }
                         })
+                        .style(|s| s.selectable(false))
                         .into_any()
                     } else {
                         empty().into_any()
                     },
                     if left {
-                        label(move || display_name_2.clone()).into_any()
+                        label(move || display_name_2.clone())
+                            .style(|s| s.selectable(false))
+                            .into_any()
                     } else {
                         empty().into_any()
                     },
                 ))
             }),
-        )),
+        ))
+        .style(|s| s.flex_direction(FlexDirection::Column)),
     )
     .style(|s| s.position(Position::Relative).selectable(false))
 }
@@ -121,8 +138,8 @@ pub fn node_item(
 
     let node_title = node.title.clone();
     let node_id = node.id.clone();
-    let inputs = node.inputs.clone();
-    let outputs = node.outputs.clone();
+    let inputs = node.ui_inputs.clone();
+    let outputs = node.ui_outputs.clone();
     let node_type = node.node_type.clone();
 
     let node_2 = node.clone();
@@ -254,103 +271,162 @@ pub fn node_canvas() -> impl View {
     // })
 }
 
-// Node components would also benefit from signals for dynamic properties
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NodeComponent {
-    pub id: String,
-    pub title: String,
-    pub node_type: NodeType,
-    pub inputs: Vec<Port>,
-    pub outputs: Vec<Port>,
-    pub parent: Option<String>,
-    pub children: Vec<String>,
-    pub initial_position: [u32; 2],
-}
-
-impl NodeComponent {
-    pub fn new(id: String, node_type: NodeType, position: Vec2) -> Self {
-        Self {
-            id,
-            title: String::new(),
-            node_type,
-            inputs: Vec::new(),
-            outputs: Vec::new(),
-            parent: None,
-            children: Vec::new(),
-            initial_position: [0, 0],
-        }
-    }
-}
-
-impl NodeComponent {
-    pub fn get_type_color(&self) -> Color {
-        match self.node_type {
-            // data
-            NodeType::State { .. } => Color::BLUE,
-            NodeType::Array { .. } => Color::BLUE,
-            NodeType::Dictionary { .. } => Color::BLUE,
-            // control flow
-            NodeType::Effect { .. } => Color::GREEN,
-            NodeType::Event { .. } => Color::GREEN,
-            NodeType::Conditional { .. } => Color::GREEN,
-            NodeType::Loop { .. } => Color::GREEN,
-            NodeType::Gate { .. } => Color::GREEN,
-            NodeType::Sequence { .. } => Color::GREEN,
-            // render
-            NodeType::Render { .. } => Color::RED,
-            NodeType::Camera { .. } => Color::RED,
-            NodeType::UI { .. } => Color::RED,
-            // operations
-            NodeType::MathOp { .. } => Color::YELLOW,
-            NodeType::VectorOp { .. } => Color::YELLOW,
-            NodeType::StringOp { .. } => Color::YELLOW,
-            NodeType::PhysicsOp { .. } => Color::YELLOW,
-            NodeType::AnimationOp { .. } => Color::YELLOW,
-            NodeType::AudioOp { .. } => Color::YELLOW,
-            // systems
-            NodeType::Behavior { .. } => Color::BLACK,
-            NodeType::Spawner { .. } => Color::BLACK,
-            NodeType::Collision { .. } => Color::BLACK,
-            NodeType::Timer { .. } => Color::BLACK,
-            NodeType::GameState { .. } => Color::BLACK,
-        }
-    }
-}
-
-// Port system using labels instead of paths
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Port {
-    pub id: String,
-    pub display_name: String,
-    pub connected_to: Option<String>, // ID of connected port
-    // pub connection_type: NodeType,
-    pub is_output: bool,
-}
-
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-// pub enum PortType {
-//     State,
-//     Effect,
-//     // etc
-// }
-
 pub fn create_test_nodes() -> Vec<NodeComponent> {
     vec![
+        // setting up state
+        NodeComponent {
+            id: "stringa".to_string(),
+            title: "Name (String)".to_string(),
+            initial_position: [50, 50],
+            node_type: NodeType::String,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "string_value1".to_string(),
+                input_name: Some("value".to_string()),
+                connected_to: Some("name_54".to_string()),
+                display_name: "String Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        NodeComponent {
+            id: "valuea".to_string(),
+            title: "Value (String)".to_string(),
+            initial_position: [250, 50],
+            node_type: NodeType::String,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "string_value2".to_string(),
+                input_name: Some("value".to_string()),
+                connected_to: Some("value_54".to_string()),
+                display_name: "String Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        NodeComponent {
+            id: "datatypea".to_string(),
+            title: "Data Type (DateType)".to_string(),
+            initial_position: [450, 50],
+            node_type: NodeType::DataType,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "datatype_value2".to_string(),
+                input_name: Some("datatype".to_string()),
+                connected_to: Some("datatype_54".to_string()),
+                display_name: "Data Type Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        NodeComponent {
+            id: "persistenta".to_string(),
+            title: "Persistent (Boolean)".to_string(),
+            initial_position: [650, 50],
+            node_type: NodeType::Boolean,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "bool_value2".to_string(),
+                input_name: Some("boolean".to_string()),
+                connected_to: Some("persistent_54".to_string()),
+                display_name: "Boolean Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
         NodeComponent {
             id: "state1".to_string(),
-            title: "Player Health (State)".to_string(),
-            initial_position: [100, 100],
-            node_type: NodeType::State {
-                name: "Health State".to_string(),
-                value: "80".to_string(),
-                data_type: crate::helpers::nodes::DataType::String,
-                persistent: false,
-            },
-            inputs: vec![],
-            outputs: vec![Port {
+            title: "Player Health (ReactiveState)".to_string(),
+            initial_position: [100, 200],
+            node_type: NodeType::ReactiveState,
+            // node_inputs: NodeInputs::State {
+            //     name: "Health State".to_string(),
+            //     value: "80".to_string(),
+            //     data_type: crate::helpers::nodes::DataType::String,
+            //     persistent: false,
+            // },
+            ui_inputs: vec![
+                Port {
+                    id: "name_54".to_string(),
+                    input_name: Some("name".to_string()),
+                    connected_to: Some("stringa".to_string()),
+                    display_name: "Name".to_string(),
+                    // connection_type: PortType::Variable,
+                    is_output: false,
+                },
+                Port {
+                    id: "value_54".to_string(),
+                    input_name: Some("value".to_string()),
+                    connected_to: Some("string_value2".to_string()),
+                    display_name: "Value".to_string(),
+                    // connection_type: PortType::Variable,
+                    is_output: false,
+                },
+                Port {
+                    id: "datatype_54".to_string(),
+                    input_name: Some("data_type".to_string()),
+                    connected_to: Some("datatype_value2".to_string()),
+                    display_name: "Data Type".to_string(),
+                    // connection_type: PortType::Variable,
+                    is_output: false,
+                },
+                Port {
+                    id: "persistent_54".to_string(),
+                    input_name: Some("persistent".to_string()),
+                    connected_to: Some("bool_value2".to_string()),
+                    display_name: "Persistent".to_string(),
+                    // connection_type: PortType::Variable,
+                    is_output: false,
+                },
+            ],
+            ui_outputs: vec![Port {
                 id: "health_out".to_string(),
-                connected_to: Some("effect1_in".to_string()),
-                display_name: "Health Out".to_string(),
+                input_name: None,
+                connected_to: Some("dependencies1_in".to_string()),
+                display_name: "ReactiveState Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        // setting up effect
+        NodeComponent {
+            id: "execution_order1a".to_string(),
+            title: "Execution Order (Integer)".to_string(),
+            initial_position: [50, 250],
+            node_type: NodeType::Integer,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "integer1".to_string(),
+                input_name: Some("integer".to_string()),
+                connected_to: Some("exec_order1_in".to_string()),
+                display_name: "Integer Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        NodeComponent {
+            id: "parallel1b".to_string(),
+            title: "Parallel (Boolean)".to_string(),
+            initial_position: [250, 250],
+            node_type: NodeType::Boolean,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "bool45".to_string(),
+                input_name: Some("boolean".to_string()),
+                connected_to: Some("parallel1_in".to_string()),
+                display_name: "Boolean Output".to_string(),
                 // connection_type: PortType::Variable,
                 is_output: true,
             }],
@@ -360,23 +436,82 @@ pub fn create_test_nodes() -> Vec<NodeComponent> {
         NodeComponent {
             id: "effect1".to_string(),
             title: "Detect Warning (Effect)".to_string(),
-            initial_position: [350, 100],
-            node_type: NodeType::Effect {
-                dependencies: Vec::new(),
-                execution_order: 0,
-                parallel: false,
-            },
-            inputs: vec![Port {
-                id: "effect1_in".to_string(),
-                connected_to: Some("health_out".to_string()),
-                display_name: "Effect 1 In".to_string(),
-                // connection_type: PortType::Variable,
-                is_output: false,
-            }],
-            outputs: vec![Port {
+            initial_position: [350, 500],
+            node_type: NodeType::Effect,
+            // node_inputs: NodeInputs::Effect {
+            //     dependencies: Vec::new(),
+            //     execution_order: 0,
+            //     parallel: false,
+            // },
+            ui_inputs: vec![
+                //     Port {
+                //     id: "effect1_in".to_string(),
+                //     input_name: Some("TBD".to_string()),
+                //     connected_to: Some("health_out".to_string()),
+                //     display_name: "Effect 1 In".to_string(),
+                //     is_output: false,
+                // }
+                Port {
+                    id: "dependencies1_in".to_string(),
+                    input_name: Some("dependencies".to_string()),
+                    connected_to: Some("health_out".to_string()), // connects to State
+                    display_name: "Dependencies".to_string(),
+                    is_output: false,
+                },
+                Port {
+                    id: "exec_order1_in".to_string(),
+                    input_name: Some("exec_order".to_string()),
+                    connected_to: Some("integer1".to_string()),
+                    display_name: "Exec. Order".to_string(),
+                    is_output: false,
+                },
+                Port {
+                    id: "parallel1_in".to_string(),
+                    input_name: Some("parallel".to_string()),
+                    connected_to: Some("bool45".to_string()),
+                    display_name: "Parallel".to_string(),
+                    is_output: false,
+                },
+            ],
+            ui_outputs: vec![Port {
                 id: "warning_out".to_string(),
-                connected_to: Some("ui1_in".to_string()),
-                display_name: "Warning Out".to_string(),
+                input_name: None,
+                connected_to: Some("disval1_in".to_string()),
+                display_name: "On Effect".to_string(),
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        // displaying to ui
+        NodeComponent {
+            id: "elemtyp23".to_string(),
+            title: "Element Type (Elem. Type)".to_string(),
+            initial_position: [50, 350],
+            node_type: NodeType::UIElementType,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "elemtypeoutput2".to_string(),
+                input_name: Some("elem_type".to_string()),
+                connected_to: Some("eltype1_in".to_string()),
+                display_name: "Elem. Type Output".to_string(),
+                // connection_type: PortType::Variable,
+                is_output: true,
+            }],
+            parent: None,
+            children: Vec::new(),
+        },
+        NodeComponent {
+            id: "stylehere2".to_string(),
+            title: "Bar Style (Style)".to_string(),
+            initial_position: [50, 350],
+            node_type: NodeType::Style,
+            ui_inputs: vec![],
+            ui_outputs: vec![Port {
+                id: "styleout".to_string(),
+                input_name: Some("style".to_string()),
+                connected_to: Some("style1_in".to_string()),
+                display_name: "Style Output".to_string(),
                 // connection_type: PortType::Variable,
                 is_output: true,
             }],
@@ -386,20 +521,44 @@ pub fn create_test_nodes() -> Vec<NodeComponent> {
         NodeComponent {
             id: "ui1".to_string(),
             title: "Update Health Bar (UI)".to_string(),
-            initial_position: [600, 100],
-            node_type: NodeType::UI {
-                element_type: crate::helpers::nodes::UIElementType::ProgressBar,
-                layout: crate::helpers::nodes::LayoutType::Absolute,
-                style: "temp_style".to_string(),
-            },
-            inputs: vec![Port {
-                id: "ui1_in".to_string(),
-                display_name: "UI In".to_string(),
-                // connection_type: PortType::Variable,
-                connected_to: Some("warning_out".to_string()),
-                is_output: false,
-            }],
-            outputs: vec![],
+            initial_position: [600, 500],
+            node_type: NodeType::UI,
+            // node_inputs: NodeInputs::UI {
+            //     element_type: crate::helpers::nodes::UIElementType::ProgressBar,
+            //     layout: crate::helpers::nodes::LayoutType::Absolute,
+            //     style: "temp_style".to_string(),
+            // },
+            ui_inputs: vec![
+                //     Port {
+                //     id: "ui1_in".to_string(),
+                //     input_name: Some("TBD".to_string()),
+                //     display_name: "UI In".to_string(),
+                //     connected_to: Some("warning_out".to_string()),
+                //     is_output: false,
+                // }
+                Port {
+                    id: "disval1_in".to_string(),
+                    input_name: Some("display_value".to_string()),
+                    display_name: "Display Value".to_string(),
+                    connected_to: Some("warning_out".to_string()),
+                    is_output: false,
+                },
+                Port {
+                    id: "eltype1_in".to_string(),
+                    input_name: Some("element_type".to_string()),
+                    display_name: "Element Type".to_string(),
+                    connected_to: Some("elemtypeoutput2".to_string()),
+                    is_output: false,
+                },
+                Port {
+                    id: "style1_in".to_string(),
+                    input_name: Some("style".to_string()),
+                    display_name: "Style".to_string(),
+                    connected_to: Some("styleout".to_string()),
+                    is_output: false,
+                },
+            ],
+            ui_outputs: vec![],
             parent: None,
             children: Vec::new(),
         },
