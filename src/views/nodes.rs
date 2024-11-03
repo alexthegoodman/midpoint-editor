@@ -49,9 +49,15 @@ pub fn node_ports(
                     .as_ref()
                     .expect("Couldn't get connected_to");
                 let all_nodes = all_nodes.get();
-                let connected_to_port = all_nodes
-                    .iter()
-                    .find_map(|n| n.inputs.iter().find(|i| i.id == *connected_to).cloned());
+                let connected_to_port = if port.is_output {
+                    all_nodes
+                        .iter()
+                        .find_map(|n| n.inputs.iter().find(|i| i.id == *connected_to).cloned())
+                } else {
+                    all_nodes
+                        .iter()
+                        .find_map(|n| n.outputs.iter().find(|i| i.id == *connected_to).cloned())
+                };
 
                 h_stack((
                     if left {
@@ -317,7 +323,8 @@ pub struct Port {
     pub id: String,
     pub display_name: String,
     pub connected_to: Option<String>, // ID of connected port
-                                      // pub connection_type: NodeType,
+    // pub connection_type: NodeType,
+    pub is_output: bool,
 }
 
 // #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -345,6 +352,7 @@ pub fn create_test_nodes() -> Vec<NodeComponent> {
                 connected_to: Some("effect1_in".to_string()),
                 display_name: "Health Out".to_string(),
                 // connection_type: PortType::Variable,
+                is_output: true,
             }],
             parent: None,
             children: Vec::new(),
@@ -363,12 +371,14 @@ pub fn create_test_nodes() -> Vec<NodeComponent> {
                 connected_to: Some("health_out".to_string()),
                 display_name: "Effect 1 In".to_string(),
                 // connection_type: PortType::Variable,
+                is_output: false,
             }],
             outputs: vec![Port {
                 id: "warning_out".to_string(),
                 connected_to: Some("ui1_in".to_string()),
                 display_name: "Warning Out".to_string(),
                 // connection_type: PortType::Variable,
+                is_output: true,
             }],
             parent: None,
             children: Vec::new(),
@@ -387,6 +397,7 @@ pub fn create_test_nodes() -> Vec<NodeComponent> {
                 display_name: "UI In".to_string(),
                 // connection_type: PortType::Variable,
                 connected_to: Some("warning_out".to_string()),
+                is_output: false,
             }],
             outputs: vec![],
             parent: None,
