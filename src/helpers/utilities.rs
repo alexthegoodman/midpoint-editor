@@ -67,3 +67,26 @@ pub fn change_extension_to_glb(filename: &str) -> String {
     path.set_extension("glb");
     path.to_string_lossy().into_owned()
 }
+
+pub fn parse_string_to_float(input: &str) -> Option<f32> {
+    // First trim any whitespace
+    let trimmed = input.trim();
+
+    // Check if string is empty after trimming
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    // Attempt to parse and handle errors gracefully
+    match trimmed.parse::<f32>() {
+        Ok(value) => {
+            // Check if value is finite (not NaN or infinite)
+            if value.is_finite() {
+                Some(value)
+            } else {
+                None
+            }
+        }
+        Err(_) => None,
+    }
+}

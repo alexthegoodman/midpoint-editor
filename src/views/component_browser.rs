@@ -135,11 +135,12 @@ pub fn component_browser(
                 )
             },
         )
+        .style(|s| {
+            s.flex_direction(FlexDirection::Row)
+                .flex_wrap(FlexWrap::Wrap)
+        })
+        .style(|s| s.width(260.0))
         .into_view(),
     ),))
-    .style(|s| {
-        s.flex_direction(FlexDirection::Row)
-            .flex_wrap(FlexWrap::Wrap)
-    })
     .style(|s| s.width(260.0))
 }

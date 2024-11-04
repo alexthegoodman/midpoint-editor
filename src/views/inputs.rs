@@ -12,7 +12,9 @@ use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
 use midpoint_engine::floem::keyboard::{Key, KeyCode, NamedKey};
 use midpoint_engine::floem::kurbo::Size;
 use midpoint_engine::floem::peniko::Color;
-use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, create_signal, RwSignal, SignalRead};
+use midpoint_engine::floem::reactive::{
+    create_effect, create_rw_signal, create_signal, RwSignal, SignalRead,
+};
 use midpoint_engine::floem::style::{Background, CursorStyle, Style, Transition};
 use midpoint_engine::floem::taffy::{AlignItems, Position};
 use midpoint_engine::floem::text::Weight;
@@ -76,6 +78,7 @@ pub fn styled_input(
         text_input(value)
             .on_event_stop(EventListener::KeyUp, move |event: &Event| {
                 if let Event::KeyUp(key_event) = event {
+                    // why lock this here??
                     let state_helper = state_2.lock().unwrap();
 
                     // Handle keyboard shortcuts first
