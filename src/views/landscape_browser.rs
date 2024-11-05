@@ -174,6 +174,7 @@ pub fn landscape_item(
                         landscapeComponentId.to_string().clone(),
                         heightmap_filename.clone(),
                         // js_callback,
+                        [0.0, 0.0, 0.0],
                     );
 
                     // update selected_component_id in signal

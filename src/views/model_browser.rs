@@ -16,6 +16,7 @@ use midpoint_engine::floem::IntoView;
 use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::handlers::handle_add_model;
 use midpoint_engine::helpers::saved_data::{ComponentData, ComponentKind, File, GenericProperties};
+use nalgebra::{Isometry3, Vector3};
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
@@ -69,6 +70,7 @@ pub fn model_item(
                         model_id.clone(),
                         component_id.to_string(),
                         filename.clone(),
+                        Isometry3::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 0.0)),
                     );
 
                     // create physics
