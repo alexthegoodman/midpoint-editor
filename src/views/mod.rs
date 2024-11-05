@@ -1,3 +1,4 @@
+pub mod animations;
 pub mod app;
 pub mod aside;
 pub mod audio;
@@ -9,6 +10,7 @@ pub mod landscape_browser;
 pub mod level_browser;
 pub mod map;
 pub mod model_browser;
+pub mod nodes;
 pub mod performance;
 pub mod project_browser;
 pub mod project_settings;
@@ -17,4 +19,3 @@ pub mod scene;
 pub mod shared;
 pub mod story;
 pub mod texture_browser;
-pub mod nodes;

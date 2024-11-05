@@ -28,6 +28,7 @@ use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 use crate::editor_state::StateHelper;
 use crate::helpers::websocket::WebSocketManager;
 
+use super::animations::animations_view;
 use super::audio::audio_view;
 use super::concepts::concepts_view;
 use super::editor_settings::editor_settings;
@@ -57,10 +58,8 @@ pub fn project_tab_interface(
         "Scene",
         "Nodes",
         "Concepts",
+        "Animations",
         "Map",
-        "Story",
-        "Audio",
-        "Performance",
         "Settings",
     ]
     .into_iter()
@@ -82,9 +81,10 @@ pub fn project_tab_interface(
                     .unwrap();
                 let active = index == active_tab.get();
                 let icon_name = match item {
+                    "Animations" => "motion-arrow",
                     "Concepts" => "panorama",
                     "Scene" => "cube",
-                    "Nodes" => "cube",
+                    "Nodes" => "circles",
                     "Map" => "map",
                     "Story" => "book",
                     "Audio" => "faders",
@@ -93,6 +93,7 @@ pub fn project_tab_interface(
                     _ => "plus",
                 };
                 let destination_view = match item {
+                    "Animations" => "animation_rigging", // "animation_rigging" and "animation_motion"
                     "Concepts" => "concepts",
                     "Scene" => "scene",
                     "Nodes" => "nodes",
@@ -201,6 +202,12 @@ pub fn project_tab_interface(
                         move || tabs.get(),
                         |it| *it,
                         move |it| match it {
+                            "Animations" => animations_view(
+                                state_2.clone(),
+                                gpu_helper.clone(),
+                                viewport.clone(),
+                            )
+                            .into_any(),
                             "Concepts" => {
                                 concepts_view(state_2.clone(), gpu_helper.clone(), viewport.clone())
                                     .into_any()

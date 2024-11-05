@@ -123,18 +123,19 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // println!("Render frame...");
 
+                    let viewport = engine.viewport.lock().unwrap();
+                    let window_size = WindowSize {
+                        width: viewport.width as u32,
+                        height: viewport.height as u32,
+                    };
+
                     // Render partial screen content
                     // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
                     render_pass.set_scissor_rect(
                         500,
                         0,
-                        window_handle
-                            .window_width
-                            .expect("Couldn't get window width")
-                            - 500,
-                        window_handle
-                            .window_height
-                            .expect("Couldn't get window height"),
+                        window_size.width - 500,
+                        window_size.height,
                     );
 
                     render_pass.set_pipeline(
@@ -143,12 +144,6 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             .as_ref()
                             .expect("Couldn't fetch render pipeline"),
                     );
-
-                    let viewport = engine.viewport.lock().unwrap();
-                    let window_size = WindowSize {
-                        width: viewport.width as u32,
-                        height: viewport.height as u32,
-                    };
 
                     drop(viewport);
 
@@ -667,29 +662,34 @@ fn handle_window_resize(
     viewport: std::sync::Arc<Mutex<Viewport>>,
 ) -> Option<Box<dyn FnMut(PhysicalSize<u32>, LogicalSize<f64>)>> {
     Some(Box::new(move |size, logical_size| {
-        // let mut editor = editor.lock().unwrap();
+        // let mut editor_state = editor_state.lock().unwrap();
 
-        // let window_size = WindowSize {
-        //     width: size.width,
-        //     height: size.height,
-        // };
+        let window_size = WindowSize {
+            width: size.width,
+            height: size.height,
+        };
 
-        // let mut viewport = viewport.lock().unwrap();
+        let mut viewport = viewport.lock().unwrap();
 
-        // viewport.width = size.width as f32;
-        // viewport.height = size.height as f32;
+        viewport.width = size.width as f32;
+        viewport.height = size.height as f32;
 
-        // let mut camera = editor.camera.expect("Couldn't get camera on resize");
+        let ratio = viewport.width / viewport.height;
+
+        // let mut camera = editor_state.camera.expect("Couldn't get camera on resize");
+        let mut camera = get_camera();
 
         // camera.window_size.width = size.width;
         // camera.window_size.height = size.height;
 
         // editor.update_date_from_window_resize(&window_size, &gpu_resources.device);
 
-        // gpu_helper
-        //     .lock()
-        //     .unwrap()
-        //     .recreate_depth_view(&gpu_resources, &window_size);
+        camera.update_aspect_ratio(ratio);
+
+        gpu_helper
+            .lock()
+            .unwrap()
+            .recreate_depth_view(&gpu_resources, size.width, size.height);
     }))
 }
 
@@ -1272,12 +1272,12 @@ async fn main() {
                     viewport_4.clone(),
                     record_2.clone(),
                 );
-                // window_handle.handle_window_resized = handle_window_resize(
-                //     cloned7,
-                //     gpu_resources.clone(),
-                //     gpu_cloned3,
-                //     cloned_viewport3.clone(),
-                // );
+                window_handle.handle_window_resized = handle_window_resize(
+                    editor_state.clone(),
+                    gpu_resources.clone(),
+                    gpu_cloned2.clone(),
+                    viewport_4.clone(),
+                );
                 // window_handle.handle_mouse_wheel =
                 //     handle_mouse_wheel(cloned11, gpu_resources.clone(), cloned_viewport3.clone());
                 // window_handle.handle_modifiers_changed = handle_modifiers_changed(
