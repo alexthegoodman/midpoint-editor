@@ -97,7 +97,7 @@ pub fn part_properties(
             // .absolute()
             .height(800.0)
             .margin_left(0.0)
-            .margin_top(20)
+        // .margin_top(20)
         // .z_index(10)
     })
 }
@@ -121,7 +121,7 @@ pub fn joint_tree(
             )
         },
     )
-    .style(|s| s.flex_col().column_gap(5).padding(10))
+    .style(|s| s.flex_col().column_gap(0).padding(0))
     .into_view()
 }
 
@@ -175,7 +175,7 @@ pub fn joint_item(
             let joint_data = &mut joints.get();
             let affected_children = get_all_child_ids(joint_data, &joint_id.clone());
             if affected_children.len() > 0 {
-                svg(create_icon("chevron-right"))
+                svg(create_icon("caret-right"))
                     .style(|s| s.width(16).height(16).color(Color::BLACK))
                     .style(|s| s.margin_right(4.0))
                     .into_any()
@@ -184,8 +184,8 @@ pub fn joint_item(
             }
         },
         // Joint icon
-        svg(create_icon("joint"))
-            .style(|s| s.width(24).height(24).color(Color::BLACK))
+        svg(create_icon("bone"))
+            .style(|s| s.width(18).height(18).color(Color::BLACK))
             .style(|s| s.margin_right(7.0))
             .on_event_stop(EventListener::PointerDown, |_| {}),
         // Joint name
@@ -259,20 +259,20 @@ pub fn joint_item(
     })
     .dragging_style(|s| {
         s.box_shadow_blur(3)
-            .box_shadow_color(Color::rgba(100.0, 100.0, 100.0, 0.5))
+            .box_shadow_color(Color::rgba(0.0, 0.0, 0.0, 0.5))
             .box_shadow_spread(2)
     })
     .style(|s| {
         s.width(220.0)
             // .border_radius(5.0)
             .align_items(AlignItems::Center)
-            .padding_vert(4)
-            .background(Color::rgb(255.0, 239.0, 194.0))
+            .padding_vert(2)
+            .background(Color::rgb(1.0, 1.0, 1.0))
             .border_bottom(1)
             .margin_bottom(0)
-            .border_color(Color::rgb(200.0, 200.0, 200.0))
-            .hover(|s| s.background(Color::rgb(222.0, 206.0, 160.0)))
-            .active(|s| s.background(Color::rgb(237.0, 218.0, 164.0)))
+            .border_color(Color::rgb(0.5, 0.5, 0.5))
+            .hover(|s| s.background(Color::rgb(0.8, 0.8, 0.8)))
+            .active(|s| s.background(Color::ROYAL_BLUE))
     })
 }
 
