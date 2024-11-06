@@ -5,6 +5,7 @@ use midpoint_engine::floem::event::EventListener;
 use midpoint_engine::floem::event::EventPropagation;
 use midpoint_engine::floem::peniko::Color;
 use midpoint_engine::floem::reactive::create_effect;
+use midpoint_engine::floem::reactive::create_memo;
 use midpoint_engine::floem::reactive::create_rw_signal;
 use midpoint_engine::floem::reactive::RwSignal;
 use midpoint_engine::floem::reactive::SignalGet;
@@ -53,11 +54,15 @@ pub fn part_properties(
             let part_data = saved_state
                 .skeleton_parts
                 .iter()
-                .find(|p| p.id == selected_part_id_signal.get())
-                .expect("Couldn't find joint data");
-            let joint_data = part_data.joints.clone();
+                .find(|p| p.id == selected_part_id_signal.get());
 
-            joints.set(joint_data);
+            if (part_data.is_some()) {
+                let part_data = part_data.expect("Couldn't find joint data");
+
+                let joint_data = part_data.joints.clone();
+
+                joints.set(joint_data);
+            }
         }
     });
 
@@ -140,15 +145,30 @@ pub fn joint_item(
     joints: RwSignal<Vec<Joint>>,
     dragger_id: RwSignal<String>,
     joint: Joint,
-    depth: usize,
+    initial_depth: usize,
 ) -> impl IntoView {
-    let indent = depth * 20; // 20 pixels per level of depth
+    let depth = create_rw_signal(initial_depth);
+    // let indent = depth * 20; // 20 pixels per level of depth
+    let indent = create_memo(move |_| depth.get() * 20); // Create reactive indent
     let joint_id = joint.id.clone();
+    let joint_id_clone = joint.id.clone();
     let joint_name = joint.name.clone();
+    let joint_name_clone = joint.name.clone();
+
+    create_effect(move |_| {
+        let joints = joints.get();
+        let new_depth = calculate_depth(&joints, joint_id_clone.clone());
+        println!(
+            "depth effect {:?} {:?}",
+            joint_name_clone.clone(),
+            new_depth
+        );
+        depth.set(new_depth);
+    });
 
     h_stack((
         // Indentation spacer
-        empty().style(move |s| s.width(indent as f64)),
+        empty().style(move |s| s.width(indent.get() as f64)),
         // Expand/collapse button (if has children)
         {
             // let has_children = !joint.children.is_empty();
@@ -213,8 +233,9 @@ pub fn joint_item(
                         updated_joint.parent_id = Some(joint_id);
 
                         // Update local position relative to new parent
-                        updated_joint.local_position =
-                            calculate_new_local_position(new_data, &updated_joint, &joint);
+                        // perhaps the adjustment should be manual?
+                        // updated_joint.local_position =
+                        //     calculate_new_local_position(new_data, &updated_joint, &joint);
 
                         // Remove and reinsert the joint at new position
 
@@ -243,7 +264,7 @@ pub fn joint_item(
     })
     .style(|s| {
         s.width(220.0)
-            .border_radius(5.0)
+            // .border_radius(5.0)
             .align_items(AlignItems::Center)
             .padding_vert(4)
             .background(Color::rgb(255.0, 239.0, 194.0))

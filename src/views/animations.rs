@@ -52,156 +52,158 @@ pub fn animations_view(
     let skeleton_selected_signal = create_rw_signal(false);
     let selected_skeleton_id_signal = create_rw_signal(String::new());
 
-    let list = scroll({
-        dyn_stack(
-            move || tabs.get(),
-            move |item| *item,
-            move |item| {
-                let index = tabs
-                    .get_untracked()
-                    .iter()
-                    .position(|it| *it == item)
-                    .unwrap();
-                let active = index == active_tab.get();
-                stack((tab_button(
-                    item,
-                    Some({
-                        let state_helper = state_helper.clone();
-
-                        move || {
-                            println!("Click...");
-                            set_active_tab.update(|v: &mut usize| {
-                                *v = tabs
-                                    .get_untracked()
-                                    .iter()
-                                    .position(|it| *it == item)
-                                    .unwrap();
-                            });
-
-                            // EventPropagation::Continue
-                        }
-                    }),
-                    index,
-                    active_tab,
-                ),))
-                // .on_click()
-                .on_event(EventListener::KeyDown, move |e| {
-                    if let Event::KeyDown(key_event) = e {
-                        let active = active_tab.get();
-                        if key_event.modifiers.is_empty() {
-                            match key_event.key.logical_key {
-                                Key::Named(NamedKey::ArrowUp) => {
-                                    if active > 0 {
-                                        set_active_tab.update(|v| *v -= 1)
-                                    }
-                                    EventPropagation::Stop
-                                }
-                                Key::Named(NamedKey::ArrowDown) => {
-                                    if active < tabs.get().len() - 1 {
-                                        set_active_tab.update(|v| *v += 1)
-                                    }
-                                    EventPropagation::Stop
-                                }
-                                _ => EventPropagation::Continue,
-                            }
-                        } else {
-                            EventPropagation::Continue
-                        }
-                    } else {
-                        EventPropagation::Continue
-                    }
-                })
-                .keyboard_navigatable()
-            },
-        )
-        .style(|s| s.flex_row().padding_vert(7.0).height(55.0))
-    })
-    // .scroll_style(|s| s.shrink_to_fit())
-    .style(|s| s.height(55.0).width(260.0));
-
-    // let keyframe_timeline = TimelineGridView::new(TimelineState {}, TimelineConfig {}, AnimationData {});
     let keyframe_timeline = create_test_timeline();
 
     let active_1 = create_rw_signal(false);
     let active_2 = create_rw_signal(false);
 
     h_stack((
-        container((v_stack((
-            list, // tab list
-            dyn_container(
-                move || part_selected_signal.get() || skeleton_selected_signal.get(),
-                move |either_selected_real| {
-                    if !either_selected_real {
-                        tab(
-                            // active tab
-                            move || active_tab.get(),
-                            move || tabs.get(),
-                            |it| *it,
-                            {
-                                let state_2 = state_2.clone();
-                                let state_5 = state_5.clone();
-                                let gpu_helper = gpu_helper.clone();
-                                let viewport = viewport.clone();
+        dyn_container(
+            move || !part_selected_signal.get() && !skeleton_selected_signal.get(),
+            move |either_selected_real| {
+                let state_helper = state_helper.clone();
 
-                                move |it| match it {
-                                    "Parts" => part_browser(
-                                        state_2.clone(),
-                                        gpu_helper.clone(),
-                                        viewport.clone(),
-                                        part_selected_signal,
-                                        selected_part_id_signal,
-                                    )
-                                    .into_any(),
-                                    "Skeletons" => skeleton_browser(
-                                        state_5.clone(),
-                                        gpu_helper.clone(),
-                                        viewport.clone(),
-                                        skeleton_selected_signal,
-                                        selected_skeleton_id_signal,
-                                    )
-                                    .into_any(),
-                                    _ => label(|| "Not implemented".to_owned()).into_any(),
+                let list = scroll({
+                    dyn_stack(
+                        move || tabs.get(),
+                        move |item| *item,
+                        move |item| {
+                            let index = tabs
+                                .get_untracked()
+                                .iter()
+                                .position(|it| *it == item)
+                                .unwrap();
+                            let active = index == active_tab.get();
+                            stack((tab_button(
+                                item,
+                                Some({
+                                    let state_helper = state_helper.clone();
+
+                                    move || {
+                                        println!("Click...");
+                                        set_active_tab.update(|v: &mut usize| {
+                                            *v = tabs
+                                                .get_untracked()
+                                                .iter()
+                                                .position(|it| *it == item)
+                                                .unwrap();
+                                        });
+
+                                        // EventPropagation::Continue
+                                    }
+                                }),
+                                index,
+                                active_tab,
+                            ),))
+                            // .on_click()
+                            .on_event(EventListener::KeyDown, move |e| {
+                                if let Event::KeyDown(key_event) = e {
+                                    let active = active_tab.get();
+                                    if key_event.modifiers.is_empty() {
+                                        match key_event.key.logical_key {
+                                            Key::Named(NamedKey::ArrowUp) => {
+                                                if active > 0 {
+                                                    set_active_tab.update(|v| *v -= 1)
+                                                }
+                                                EventPropagation::Stop
+                                            }
+                                            Key::Named(NamedKey::ArrowDown) => {
+                                                if active < tabs.get().len() - 1 {
+                                                    set_active_tab.update(|v| *v += 1)
+                                                }
+                                                EventPropagation::Stop
+                                            }
+                                            _ => EventPropagation::Continue,
+                                        }
+                                    } else {
+                                        EventPropagation::Continue
+                                    }
+                                } else {
+                                    EventPropagation::Continue
                                 }
-                            },
-                        )
-                        .style(|s| s.flex_col().items_start().margin_top(20.0))
+                            })
+                            .keyboard_navigatable()
+                        },
+                    )
+                    .style(|s| s.flex_row().padding_vert(7.0).height(55.0))
+                })
+                .style(|s| s.height(55.0).width(260.0));
+
+                if either_selected_real {
+                    container(
+                        (container((v_stack((
+                            list, // tab list
+                            tab(
+                                // active tab
+                                move || active_tab.get(),
+                                move || tabs.get(),
+                                |it| *it,
+                                {
+                                    let state_2 = state_2.clone();
+                                    let state_5 = state_5.clone();
+                                    let gpu_helper = gpu_helper.clone();
+                                    let viewport = viewport.clone();
+
+                                    move |it| match it {
+                                        "Parts" => part_browser(
+                                            state_2.clone(),
+                                            gpu_helper.clone(),
+                                            viewport.clone(),
+                                            part_selected_signal,
+                                            selected_part_id_signal,
+                                        )
+                                        .into_any(),
+                                        "Skeletons" => skeleton_browser(
+                                            state_5.clone(),
+                                            gpu_helper.clone(),
+                                            viewport.clone(),
+                                            skeleton_selected_signal,
+                                            selected_skeleton_id_signal,
+                                        )
+                                        .into_any(),
+                                        _ => label(|| "Not implemented".to_owned()).into_any(),
+                                    }
+                                },
+                            )
+                            .style(|s| s.flex_col().items_start().margin_top(20.0)),
+                        ))
+                        .style(|s| card_styles(s))
+                        .style(|s| s.width(300.0)),))),
+                    )
+                    .into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
+        dyn_container(
+            move || part_selected_signal.get(),
+            move |part_selected_real| {
+                if part_selected_real {
+                    part_properties(
+                        state_3.clone(),
+                        gpu_2.clone(),
+                        viewport_2.clone(),
+                        part_selected_signal,
+                        selected_part_id_signal,
+                    )
+                    .into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
+        dyn_container(
+            move || skeleton_selected_signal.get(),
+            move |skeleton_selected_real| {
+                if skeleton_selected_real {
+                    skeleton_properties(state_4.clone(), gpu_3.clone(), viewport_3.clone())
                         .into_any()
-                    } else {
-                        empty().into_any()
-                    }
-                },
-            ),
-            dyn_container(
-                move || part_selected_signal.get(),
-                move |part_selected_real| {
-                    if part_selected_real {
-                        part_properties(
-                            state_3.clone(),
-                            gpu_2.clone(),
-                            viewport_2.clone(),
-                            part_selected_signal,
-                            selected_part_id_signal,
-                        )
-                        .into_any()
-                    } else {
-                        empty().into_any()
-                    }
-                },
-            ),
-            dyn_container(
-                move || skeleton_selected_signal.get(),
-                move |skeleton_selected_real| {
-                    if skeleton_selected_real {
-                        skeleton_properties(state_4.clone(), gpu_3.clone(), viewport_3.clone())
-                            .into_any()
-                    } else {
-                        empty().into_any()
-                    }
-                },
-            ),
-        ))
-        .style(|s| card_styles(s))
-        .style(|s| s.width(300.0)),)),
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
         v_stack((
             h_stack((
                 small_button("Test", "plus", |_| {}, active_1),
