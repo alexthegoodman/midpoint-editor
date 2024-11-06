@@ -61,26 +61,28 @@ pub fn part_properties(
         }
     });
 
-    v_stack((h_stack((
-        small_button(
-            "",
-            "arrow-left",
-            {
-                move |_| {
-                    println!("Click back!");
-                    // this action runs on_click_stop so should stop propagation
-                    part_selected_signal.update(|v| {
-                        *v = false;
-                    });
-                    selected_part_id_signal.update(|v| {
-                        *v = String::new();
-                    });
-                }
-            },
-            back_active,
-        )
-        .style(|s| s.margin_right(7.0)),
-        label(|| "Properties").style(|s| s.font_size(24.0).font_weight(Weight::THIN)),
+    v_stack((v_stack((
+        h_stack((
+            small_button(
+                "",
+                "arrow-left",
+                {
+                    move |_| {
+                        println!("Click back!");
+                        // this action runs on_click_stop so should stop propagation
+                        part_selected_signal.update(|v| {
+                            *v = false;
+                        });
+                        selected_part_id_signal.update(|v| {
+                            *v = String::new();
+                        });
+                    }
+                },
+                back_active,
+            )
+            .style(|s| s.margin_right(7.0)),
+            label(|| "Properties").style(|s| s.font_size(24.0).font_weight(Weight::THIN)),
+        )),
         joint_tree(state_helper, joints, dragger_id),
     ))
     .style(|s| s.margin_bottom(12.0)),))
@@ -241,11 +243,12 @@ pub fn joint_item(
     })
     .style(|s| {
         s.width(220.0)
-            .border_radius(15.0)
+            .border_radius(5.0)
             .align_items(AlignItems::Center)
-            .padding_vert(8)
+            .padding_vert(4)
             .background(Color::rgb(255.0, 239.0, 194.0))
             .border_bottom(1)
+            .margin_bottom(0)
             .border_color(Color::rgb(200.0, 200.0, 200.0))
             .hover(|s| s.background(Color::rgb(222.0, 206.0, 160.0)))
             .active(|s| s.background(Color::rgb(237.0, 218.0, 164.0)))
