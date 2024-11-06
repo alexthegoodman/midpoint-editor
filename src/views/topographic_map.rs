@@ -41,8 +41,8 @@ impl Default for TopographicConfig {
             height: 600.0,
             contour_interval: 50.0,
             major_interval: 250.0,
-            offset_x: 50.0,
-            offset_y: 50.0,
+            offset_x: 0.0,
+            offset_y: 0.0,
             zoom: 1.0,
             color_scheme: vec![
                 Color::rgb8(51, 190, 51),
@@ -123,6 +123,59 @@ impl TopographicMapView {
         downsampled
     }
 
+    // fn draw_contour_lines(&self, cx: &mut PaintCx) {
+    //     let (rows, cols) = self.downsampled_heights.shape();
+    //     let min_height = self.downsampled_heights.min();
+    //     let max_height = self.downsampled_heights.max();
+
+    //     let pixel_width = self.config.width / cols as f64;
+    //     let pixel_height = self.config.height / rows as f64;
+
+    //     // Generate contours using marching squares algorithm
+    //     let mut height = min_height;
+    //     while height <= max_height {
+    //         let is_major = (height / self.config.major_interval).round()
+    //             * self.config.major_interval
+    //             == height;
+
+    //         let mut path = BezPath::new();
+    //         let mut path_started = false;
+
+    //         for y in 0..rows - 1 {
+    //             for x in 0..cols - 1 {
+    //                 let cell_corners = [
+    //                     self.downsampled_heights[(y, x)],
+    //                     self.downsampled_heights[(y, x + 1)],
+    //                     self.downsampled_heights[(y + 1, x + 1)],
+    //                     self.downsampled_heights[(y + 1, x)],
+    //                 ];
+
+    //                 if let Some(contour_segments) = self.get_contour_segments(
+    //                     x,
+    //                     y,
+    //                     height,
+    //                     &cell_corners,
+    //                     pixel_width,
+    //                     pixel_height,
+    //                 ) {
+    //                     for segment in contour_segments {
+    //                         if !path_started {
+    //                             path.move_to(segment.0);
+    //                             path_started = true;
+    //                         }
+    //                         path.line_to(segment.1);
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         let stroke_width = if is_major { 2.0 } else { 1.0 };
+    //         cx.stroke(&path, &Color::BLACK, stroke_width);
+
+    //         height += self.config.contour_interval;
+    //     }
+    // }
+
     fn draw_contour_lines(&self, cx: &mut PaintCx) {
         let (rows, cols) = self.downsampled_heights.shape();
         let min_height = self.downsampled_heights.min();
@@ -131,14 +184,15 @@ impl TopographicMapView {
         let pixel_width = self.config.width / cols as f64;
         let pixel_height = self.config.height / rows as f64;
 
-        // Generate contours using marching squares algorithm
         let mut height = min_height;
         while height <= max_height {
             let is_major = (height / self.config.major_interval).round()
                 * self.config.major_interval
                 == height;
 
-            let mut path = BezPath::new();
+            // Create a new path for each height level
+            let mut paths: Vec<BezPath> = Vec::new();
+            let mut current_path = BezPath::new();
             let mut path_started = false;
 
             for y in 0..rows - 1 {
@@ -150,27 +204,40 @@ impl TopographicMapView {
                         self.downsampled_heights[(y + 1, x)],
                     ];
 
-                    if let Some(contour_segments) = self.get_contour_segments(
-                        x,
-                        y,
-                        height,
-                        &cell_corners,
-                        pixel_width,
-                        pixel_height,
-                    ) {
-                        for segment in contour_segments {
-                            if !path_started {
-                                path.move_to(segment.0);
-                                path_started = true;
-                            }
-                            path.line_to(segment.1);
+                    // If we cross the contour level
+                    if cell_corners.iter().any(|&v| v <= height)
+                        && cell_corners.iter().any(|&v| v > height)
+                    {
+                        let x_base = x as f64 * pixel_width + self.config.offset_x;
+                        let y_base = y as f64 * pixel_height + self.config.offset_y;
+
+                        // Simple linear interpolation for intersection points
+                        if !path_started {
+                            current_path = BezPath::new();
+                            current_path.move_to(Point::new(x_base, y_base));
+                            path_started = true;
                         }
+                        current_path
+                            .line_to(Point::new(x_base + pixel_width, y_base + pixel_height));
+                    } else if path_started {
+                        // End the current path when we stop crossing the contour
+                        paths.push(current_path.clone());
+                        path_started = false;
                     }
+                }
+
+                // End path at row boundaries
+                if path_started {
+                    paths.push(current_path.clone());
+                    path_started = false;
                 }
             }
 
+            // Draw all paths for this contour level
             let stroke_width = if is_major { 2.0 } else { 1.0 };
-            cx.stroke(&path, &Color::BLACK.with_alpha_factor(0.5), stroke_width);
+            for path in paths {
+                cx.stroke(&path, &Color::BLACK, stroke_width);
+            }
 
             height += self.config.contour_interval;
         }
@@ -269,6 +336,124 @@ impl TopographicMapView {
             }
         }
     }
+
+    // fn draw_contour_lines(&self, cx: &mut PaintCx) {
+    //     let (rows, cols) = self.downsampled_heights.shape();
+    //     let min_height = self.downsampled_heights.min();
+    //     let max_height = self.downsampled_heights.max();
+
+    //     let pixel_width = self.config.width / cols as f64;
+    //     let pixel_height = self.config.height / rows as f64;
+
+    //     // Calculate number of contour levels
+    //     let num_levels = ((max_height - min_height) / self.config.contour_interval).ceil() as i32;
+
+    //     for i in 0..=num_levels {
+    //         let height = min_height + i as f32 * self.config.contour_interval;
+    //         let is_major =
+    //             (i as f32 * self.config.contour_interval) % self.config.major_interval == 0.0;
+
+    //         let mut path = BezPath::new();
+    //         let mut current_line = Vec::new();
+
+    //         for y in 0..rows - 1 {
+    //             for x in 0..cols - 1 {
+    //                 let z00 = self.downsampled_heights[(y, x)];
+    //                 let z10 = self.downsampled_heights[(y, x + 1)];
+    //                 let z11 = self.downsampled_heights[(y + 1, x + 1)];
+    //                 let z01 = self.downsampled_heights[(y + 1, x)];
+
+    //                 // Check if contour passes through this cell
+    //                 let min_z = z00.min(z10).min(z11).min(z01);
+    //                 let max_z = z00.max(z10).max(z11).max(z01);
+
+    //                 if height >= min_z && height <= max_z {
+    //                     let x_base = x as f64 * pixel_width + self.config.offset_x;
+    //                     let y_base = y as f64 * pixel_height + self.config.offset_y;
+
+    //                     // Calculate intersections on cell edges
+    //                     let mut intersections = Vec::new();
+
+    //                     // Check left edge
+    //                     if (z00 <= height && z01 > height) || (z00 > height && z01 <= height) {
+    //                         let t = (height - z00) / (z01 - z00);
+    //                         intersections
+    //                             .push(Point::new(x_base, y_base + pixel_height * t as f64));
+    //                     }
+
+    //                     // Check right edge
+    //                     if (z10 <= height && z11 > height) || (z10 > height && z11 <= height) {
+    //                         let t = (height - z10) / (z11 - z10);
+    //                         intersections.push(Point::new(
+    //                             x_base + pixel_width,
+    //                             y_base + pixel_height * t as f64,
+    //                         ));
+    //                     }
+
+    //                     // Check top edge
+    //                     if (z00 <= height && z10 > height) || (z00 > height && z10 <= height) {
+    //                         let t = (height - z00) / (z10 - z00);
+    //                         intersections.push(Point::new(x_base + pixel_width * t as f64, y_base));
+    //                     }
+
+    //                     // Check bottom edge
+    //                     if (z01 <= height && z11 > height) || (z01 > height && z11 <= height) {
+    //                         let t = (height - z01) / (z11 - z01);
+    //                         intersections.push(Point::new(
+    //                             x_base + pixel_width * t as f64,
+    //                             y_base + pixel_height,
+    //                         ));
+    //                     }
+
+    //                     // If we found exactly 2 intersections, draw a line segment
+    //                     if intersections.len() == 2 {
+    //                         if current_line.is_empty() {
+    //                             path.move_to(intersections[0]);
+    //                         }
+    //                         path.line_to(intersections[1]);
+    //                         current_line.push(intersections[1]);
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         // Draw the contour line with appropriate style
+    //         let stroke_width = if is_major { 2.0 } else { 0.5 };
+    //         // let stroke = Stroke::new(Color::BLACK).with_width(stroke_width);
+
+    //         cx.stroke(&path, &Color::BLACK, stroke_width);
+    //     }
+    // }
+
+    // fn draw_elevation_colors(&self, cx: &mut PaintCx) {
+    //     let (rows, cols) = self.downsampled_heights.shape();
+    //     let min_height = self.downsampled_heights.min();
+    //     let max_height = self.downsampled_heights.max();
+    //     let height_range = max_height - min_height;
+
+    //     let pixel_width = self.config.width / cols as f64;
+    //     let pixel_height = self.config.height / rows as f64;
+
+    //     for y in 0..rows {
+    //         for x in 0..cols {
+    //             let height = self.downsampled_heights[(y, x)];
+    //             let normalized_height = (height - min_height) / height_range;
+
+    //             let color_idx =
+    //                 ((self.config.color_scheme.len() - 1) as f32 * normalized_height) as usize;
+    //             let color = self.config.color_scheme[color_idx];
+
+    //             let rect = kurbo::Rect::new(
+    //                 x as f64 * pixel_width + self.config.offset_x,
+    //                 y as f64 * pixel_height + self.config.offset_y,
+    //                 (x + 1) as f64 * pixel_width + self.config.offset_x,
+    //                 (y + 1) as f64 * pixel_height + self.config.offset_y,
+    //             );
+
+    //             cx.fill(&rect, &color, 1.0);
+    //         }
+    //     }
+    // }
 }
 
 impl View for TopographicMapView {
@@ -278,9 +463,12 @@ impl View for TopographicMapView {
 
     fn paint(&mut self, cx: &mut PaintCx) {
         // First draw the elevation colors as the base layer
-        self.draw_elevation_colors(cx);
+        // self.draw_elevation_colors(cx);
         // Then overlay the contour lines
         self.draw_contour_lines(cx);
+
+        // after
+        self.draw_elevation_colors(cx);
     }
 
     fn view_style(&self) -> Option<Style> {
@@ -291,8 +479,8 @@ impl View for TopographicMapView {
 
 pub fn create_topographic_map(heights: na::DMatrix<f32>) -> impl View {
     let config = TopographicConfig {
-        width: 1200.0,
-        height: 600.0,
+        width: 1024.0,
+        height: 1024.0,
         contour_interval: 25.0, // Draw contour every 25 units
         major_interval: 100.0,  // Major contours every 100 units
         ..Default::default()
@@ -316,11 +504,11 @@ pub fn create_topographic_map(heights: na::DMatrix<f32>) -> impl View {
 
     container((topo_map))
         .style(|s| {
-            s.width(1200.0)
-                .height(600.0)
-                .margin_top(50.0)
-                .margin_left(50.0)
-                .background(Color::LIGHT_CORAL)
+            s.width(1024.0)
+                .height(1024.0)
+                .margin_top(0.0)
+                .margin_left(0.0)
+                .background(Color::LIGHT_GRAY)
         })
         .on_event(EventListener::PointerDown, move |e| {
             println!("PointerDown");
