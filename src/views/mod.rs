@@ -24,3 +24,4 @@ pub mod skeleton_browser;
 pub mod skeleton_properties;
 pub mod story;
 pub mod texture_browser;
+pub mod topographic_map;

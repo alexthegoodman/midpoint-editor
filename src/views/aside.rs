@@ -217,7 +217,10 @@ pub fn project_tab_interface(
                                     .into_any()
                             }
                             "Nodes" => node_canvas().into_any(),
-                            "Map" => maps_view(gpu_helper.clone(), viewport.clone()).into_any(),
+                            "Map" => {
+                                maps_view(state_2.clone(), gpu_helper.clone(), viewport.clone())
+                                    .into_any()
+                            }
                             "Story" => story_view(gpu_helper.clone(), viewport.clone()).into_any(),
                             "Audio" => audio_view(gpu_helper.clone(), viewport.clone()).into_any(),
                             "Performance" => {
