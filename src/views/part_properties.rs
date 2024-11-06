@@ -4,6 +4,7 @@ use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::event::EventListener;
 use midpoint_engine::floem::event::EventPropagation;
 use midpoint_engine::floem::peniko::Color;
+use midpoint_engine::floem::reactive::create_effect;
 use midpoint_engine::floem::reactive::create_rw_signal;
 use midpoint_engine::floem::reactive::RwSignal;
 use midpoint_engine::floem::reactive::SignalGet;
@@ -25,40 +26,40 @@ use midpoint_engine::floem::{GpuHelper, IntoView, View, WindowHandle};
 
 use crate::editor_state::StateHelper;
 
-// #[derive(Clone, Debug)]
-// pub struct Joint {
-//     pub id: String,
-//     pub name: String,
-//     pub parent_id: Option<String>,
-//     pub children: Vec<String>,
-//     // Add any other joint-specific properties here
-//     pub position: (f32, f32), // x, y coordinates
-//     pub rotation: f32,
-//     pub scale: (f32, f32),
-// }
-
-// impl Joint {
-//     pub fn new(name: String) -> Self {
-//         Self {
-//             id: String::new_v4(),
-//             name,
-//             parent_id: None,
-//             children: Vec::new(),
-//             position: (0.0, 0.0),
-//             rotation: 0.0,
-//             scale: (1.0, 1.0),
-//         }
-//     }
-// }
-
 pub fn part_properties(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
+    part_selected_signal: RwSignal<bool>,
+    selected_part_id_signal: RwSignal<String>,
 ) -> impl View {
+    let state_2 = Arc::clone(&state_helper);
+
     let back_active = create_rw_signal(false);
     let dragger_id = create_rw_signal(String::new());
     let joints: RwSignal<Vec<Joint>> = create_rw_signal(Vec::new());
+
+    create_effect({
+        move |_| {
+            let mut state_helper = state_2.lock().unwrap();
+
+            let saved_state = state_helper
+                .saved_state
+                .as_ref()
+                .expect("Couldn't get saved state")
+                .lock()
+                .unwrap();
+
+            let part_data = saved_state
+                .skeleton_parts
+                .iter()
+                .find(|p| p.id == selected_part_id_signal.get())
+                .expect("Couldn't find joint data");
+            let joint_data = part_data.joints.clone();
+
+            joints.set(joint_data);
+        }
+    });
 
     v_stack((h_stack((
         small_button(
@@ -68,12 +69,12 @@ pub fn part_properties(
                 move |_| {
                     println!("Click back!");
                     // this action runs on_click_stop so should stop propagation
-                    // object_selected_signal.update(|v| {
-                    //     *v = false;
-                    // });
-                    // selected_object_id_signal.update(|v| {
-                    //     *v = Uuid::nil();
-                    // });
+                    part_selected_signal.update(|v| {
+                        *v = false;
+                    });
+                    selected_part_id_signal.update(|v| {
+                        *v = String::new();
+                    });
                 }
             },
             back_active,

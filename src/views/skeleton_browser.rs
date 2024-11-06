@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
+use midpoint_engine::animations::skeleton::SkeletonAssemblyConfig;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::ext_event::create_signal_from_tokio_channel;
@@ -29,12 +30,15 @@ use crate::helpers::auth::read_auth_token;
 use crate::helpers::textures::save_texture;
 use crate::helpers::utilities::get_filename;
 
-pub fn skeleton_item(image_path: String, label_text: String) -> impl View {
+pub fn skeleton_item(label_text: String) -> impl View {
+    let active_btn = create_rw_signal(false);
+
     v_stack(
         ((
-            dynamic_img(image_path, label_text.clone())
-                .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
+            // dynamic_img(image_path, label_text.clone())
+            //     .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
             label(move || label_text.clone()),
+            small_button("Edit Assembly", "plus", move |_| {}, active_btn),
         )),
     )
     .style(|s| s.width(120.0))
@@ -44,60 +48,47 @@ pub fn skeleton_browser(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
+    skeleton_selected_signal: RwSignal<bool>,
+    selected_skeleton_id_signal: RwSignal<String>,
 ) -> impl View {
-    // let skeleton_data: RwSignal<Vec<File>> = create_rw_signal(Vec::new());
-
     let state_2 = Arc::clone(&state_helper);
 
-    // let generate_field = create_rw_signal("".to_string());
-    // let generate_active = create_rw_signal(false);
-    // let generate_disabled = create_rw_signal(false);
-
-    // let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    // let tx = Arc::new(tx);
-    let skeleton_data: RwSignal<Vec<File>> = create_rw_signal(Vec::new());
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let tx = Arc::new(tx);
+    let skeleton_data: RwSignal<Vec<SkeletonAssemblyConfig>> = create_rw_signal(Vec::new());
 
     // Create signal from channel
-    // let update_signal = create_signal_from_tokio_channel(rx);
+    let update_signal = create_signal_from_tokio_channel(rx);
 
     // Handle updates in UI thread
-    // create_effect(move |_| {
-    //     if let Some(msg) = update_signal.get() {
-    //         match msg {
-    //             UIMessage::UpdateTextures(textures) => skeleton_data.set(textures),
-    //             UIMessage::AddTexture(file) => skeleton_data.update(|t| t.push(file)),
-    //             _ => return,
-    //         }
-    //     }
-    // });
+    create_effect(move |_| {
+        if let Some(msg) = update_signal.get() {
+            match msg {
+                UIMessage::UpdateSkeletons(skeletons) => skeleton_data.set(skeletons),
+                UIMessage::AddSkeleton(skeleton) => skeleton_data.update(|t| t.push(skeleton)),
+                _ => return,
+            }
+        }
+    });
 
-    // create_effect({
-    //     let tx = tx.clone();
-    //     move |_| {
-    //         let tx = tx.clone();
-    //         let mut state_helper = state_helper.lock().unwrap();
-    //         // let mut named_signals = state_helper.named_signals.lock().unwrap();
+    create_effect({
+        let tx = tx.clone();
+        move |_| {
+            let tx = tx.clone();
+            let mut state_helper = state_helper.lock().unwrap();
 
-    //         // named_signals.texture_browser = Some(skeleton_data);
-    //         // state_helper.register_file_signal("texture_browser".to_string(), skeleton_data);
-    //         state_helper.register_file_signal("texture_browser".to_string(), tx);
+            state_helper.register_file_signal("skeleton_browser".to_string(), tx);
 
-    //         let saved_state = state_helper
-    //             .saved_state
-    //             .as_ref()
-    //             .expect("Couldn't get saved state")
-    //             .lock()
-    //             .unwrap();
+            let saved_state = state_helper
+                .saved_state
+                .as_ref()
+                .expect("Couldn't get saved state")
+                .lock()
+                .unwrap();
 
-    //         skeleton_data.set(
-    //             saved_state
-    //                 .textures
-    //                 .as_ref()
-    //                 .expect("Couldn't get texture data")
-    //                 .clone(),
-    //         );
-    //     }
-    // });
+            skeleton_data.set(saved_state.skeletons.clone());
+        }
+    });
 
     v_stack((scroll(
         dyn_stack(
@@ -105,10 +96,7 @@ pub fn skeleton_browser(
             move |skeleton_data| skeleton_data.id.clone(),
             move |skeleton_data_real| {
                 let current_textures = skeleton_data.get(); // Add this to ensure reactivity
-                skeleton_item(
-                    skeleton_data_real.normalFilePath,
-                    skeleton_data_real.fileName,
-                )
+                skeleton_item(skeleton_data_real.name)
             },
         )
         .into_view()

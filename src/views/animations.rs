@@ -48,7 +48,9 @@ pub fn animations_view(
     let (active_tab, set_active_tab) = create_signal(0);
 
     let part_selected_signal = create_rw_signal(false);
+    let selected_part_id_signal = create_rw_signal(String::new());
     let skeleton_selected_signal = create_rw_signal(false);
+    let selected_skeleton_id_signal = create_rw_signal(String::new());
 
     let list = scroll({
         dyn_stack(
@@ -146,12 +148,16 @@ pub fn animations_view(
                                         state_2.clone(),
                                         gpu_helper.clone(),
                                         viewport.clone(),
+                                        part_selected_signal,
+                                        selected_part_id_signal,
                                     )
                                     .into_any(),
                                     "Skeletons" => skeleton_browser(
                                         state_5.clone(),
                                         gpu_helper.clone(),
                                         viewport.clone(),
+                                        skeleton_selected_signal,
+                                        selected_skeleton_id_signal,
                                     )
                                     .into_any(),
                                     _ => label(|| "Not implemented".to_owned()).into_any(),
@@ -169,8 +175,14 @@ pub fn animations_view(
                 move || part_selected_signal.get(),
                 move |part_selected_real| {
                     if part_selected_real {
-                        part_properties(state_3.clone(), gpu_2.clone(), viewport_2.clone())
-                            .into_any()
+                        part_properties(
+                            state_3.clone(),
+                            gpu_2.clone(),
+                            viewport_2.clone(),
+                            part_selected_signal,
+                            selected_part_id_signal,
+                        )
+                        .into_any()
                     } else {
                         empty().into_any()
                     }

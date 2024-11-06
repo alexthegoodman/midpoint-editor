@@ -3,6 +3,7 @@ use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
+use midpoint_engine::animations::skeleton::{SkeletonAssemblyConfig, SkeletonPart};
 use midpoint_engine::core::RendererState::RendererState;
 use midpoint_engine::core::RendererState::{ObjectConfig, ObjectProperty};
 use midpoint_engine::floem::keyboard::ModifiersState;
@@ -177,12 +178,9 @@ pub struct StateHelper {
     pub last_saved_state: Option<SavedState>, // for comparisons
     pub project_selected_signal: Option<RwSignal<Uuid>>,
     pub auth_token: String,
-    // pub simple_singals: Arc<Mutex<HashMap<String, RwSignal<String>>>>
-    // pub named_signals: Arc<Mutex<NamedSignals>>,
     pub file_signals: Arc<Mutex<HashMap<String, Arc<UnboundedSender<UIMessage>>>>>,
     pub object_selected_signal: Option<RwSignal<bool>>,
     pub selected_object_id_signal: Option<RwSignal<Uuid>>,
-    // pub selected_object_data_signal: Option<RwSignal<ObjectConfig>>,
     pub selected_object_data_signal: Option<RwSignal<ComponentData>>,
 }
 
@@ -194,6 +192,10 @@ pub enum UIMessage {
     AddConcept(File),
     UpdateModels(Vec<File>),
     AddModel(File),
+    UpdateParts(Vec<SkeletonPart>),
+    AddPart(SkeletonPart),
+    UpdateSkeletons(Vec<SkeletonAssemblyConfig>),
+    AddSkeleton(SkeletonAssemblyConfig),
 }
 
 impl StateHelper {
@@ -216,6 +218,11 @@ impl StateHelper {
         let mut signals = self.file_signals.lock().unwrap();
         signals.insert(name, signal);
     }
+
+    // pub fn register_part_signal(&mut self, name: String, signal: Arc<UnboundedSender<UIMessage>>) {
+    //     let mut signals = self.part_signals.lock().unwrap();
+    //     signals.insert(name, signal);
+    // }
 
     pub fn save_current_saved_state(&mut self) {
         let saved_state = self

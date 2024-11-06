@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
+use midpoint_engine::animations::skeleton::SkeletonPart;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::ext_event::create_signal_from_tokio_channel;
@@ -29,12 +30,28 @@ use crate::helpers::auth::read_auth_token;
 use crate::helpers::textures::save_texture;
 use crate::helpers::utilities::get_filename;
 
-pub fn part_item(image_path: String, label_text: String) -> impl View {
+pub fn part_item(
+    part_id: String,
+    label_text: String,
+    part_selected_signal: RwSignal<bool>,
+    selected_part_id_signal: RwSignal<String>,
+) -> impl View {
+    let active_btn = create_rw_signal(false);
+
     v_stack(
         ((
-            dynamic_img(image_path, label_text.clone())
-                .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
+            // dynamic_img(image_path, label_text.clone())
+            //     .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
             label(move || label_text.clone()),
+            small_button(
+                "Edit Joints",
+                "plus",
+                move |_| {
+                    part_selected_signal.set(true);
+                    selected_part_id_signal.set(part_id.clone());
+                },
+                active_btn,
+            ),
         )),
     )
     .style(|s| s.width(120.0))
@@ -44,60 +61,51 @@ pub fn part_browser(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
+    part_selected_signal: RwSignal<bool>,
+    selected_part_id_signal: RwSignal<String>,
 ) -> impl View {
-    // let part_data: RwSignal<Vec<File>> = create_rw_signal(Vec::new());
-
     let state_2 = Arc::clone(&state_helper);
 
     let generate_field = create_rw_signal("".to_string());
     let generate_active = create_rw_signal(false);
     let generate_disabled = create_rw_signal(false);
 
-    // let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    // let tx = Arc::new(tx);
-    let part_data: RwSignal<Vec<File>> = create_rw_signal(Vec::new());
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let tx = Arc::new(tx);
+    let part_data: RwSignal<Vec<SkeletonPart>> = create_rw_signal(Vec::new());
 
     // Create signal from channel
-    // let update_signal = create_signal_from_tokio_channel(rx);
+    let update_signal = create_signal_from_tokio_channel(rx);
 
     // Handle updates in UI thread
-    // create_effect(move |_| {
-    //     if let Some(msg) = update_signal.get() {
-    //         match msg {
-    //             UIMessage::UpdateTextures(textures) => part_data.set(textures),
-    //             UIMessage::AddTexture(file) => part_data.update(|t| t.push(file)),
-    //             _ => return,
-    //         }
-    //     }
-    // });
+    create_effect(move |_| {
+        if let Some(msg) = update_signal.get() {
+            match msg {
+                UIMessage::UpdateParts(parts) => part_data.set(parts),
+                UIMessage::AddPart(part) => part_data.update(|t| t.push(part)),
+                _ => return,
+            }
+        }
+    });
 
-    // create_effect({
-    //     let tx = tx.clone();
-    //     move |_| {
-    //         let tx = tx.clone();
-    //         let mut state_helper = state_helper.lock().unwrap();
-    //         // let mut named_signals = state_helper.named_signals.lock().unwrap();
+    create_effect({
+        let tx = tx.clone();
+        move |_| {
+            let tx = tx.clone();
+            let mut state_helper = state_helper.lock().unwrap();
 
-    //         // named_signals.texture_browser = Some(part_data);
-    //         // state_helper.register_file_signal("texture_browser".to_string(), part_data);
-    //         state_helper.register_file_signal("texture_browser".to_string(), tx);
+            state_helper.register_file_signal("part_browser".to_string(), tx);
 
-    //         let saved_state = state_helper
-    //             .saved_state
-    //             .as_ref()
-    //             .expect("Couldn't get saved state")
-    //             .lock()
-    //             .unwrap();
+            let saved_state = state_helper
+                .saved_state
+                .as_ref()
+                .expect("Couldn't get saved state")
+                .lock()
+                .unwrap();
 
-    //         part_data.set(
-    //             saved_state
-    //                 .textures
-    //                 .as_ref()
-    //                 .expect("Couldn't get texture data")
-    //                 .clone(),
-    //         );
-    //     }
-    // });
+            part_data.set(saved_state.skeleton_parts.clone());
+        }
+    });
 
     v_stack((
         h_stack((
@@ -176,7 +184,12 @@ pub fn part_browser(
                 move |part_data| part_data.id.clone(),
                 move |part_data_real| {
                     let current_textures = part_data.get(); // Add this to ensure reactivity
-                    part_item(part_data_real.normalFilePath, part_data_real.fileName)
+                    part_item(
+                        part_data_real.id,
+                        part_data_real.name,
+                        part_selected_signal,
+                        selected_part_id_signal,
+                    )
                 },
             )
             .into_view()
