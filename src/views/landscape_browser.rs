@@ -62,6 +62,8 @@ pub fn landscape_item(
                 .normalFilePath
                 .clone(),
             rockmap_filename.clone(),
+            120.0,
+            120.0,
         )
         .style(|s| s.width(120.0).height(120.0)),
         label(move || format!("Heightmap: {}", heightmap_filename)),

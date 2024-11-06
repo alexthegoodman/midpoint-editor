@@ -32,7 +32,7 @@ use crate::helpers::utilities::get_filename;
 pub fn texture_item(image_path: String, label_text: String) -> impl View {
     v_stack(
         ((
-            dynamic_img(image_path, label_text.clone())
+            dynamic_img(image_path, label_text.clone(), 120.0, 120.0)
                 .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
             label(move || label_text.clone()),
         )),

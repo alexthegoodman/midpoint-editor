@@ -38,11 +38,10 @@ use crate::helpers::utilities::get_filename;
 pub fn concept_item(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
-    image_path: String,
-    label_text: String,
-    image_url: String,
-    concept_id: String,
+    concept_data_real: File,
+    selected_concept: RwSignal<Option<File>>,
 ) -> impl View {
+    let select_active = create_rw_signal(false);
     let generate_active = create_rw_signal(false);
     let generate_disabled = create_rw_signal(false);
 
@@ -58,18 +57,24 @@ pub fn concept_item(
 
     v_stack(
         ((
-            dynamic_img(image_path.clone(), label_text.clone())
-                .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
+            dynamic_img(
+                concept_data_real.normalFilePath.clone(),
+                concept_data_real.fileName.clone(),
+                120.0,
+                120.0,
+            )
+            .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
             label({
-                let label_text = label_text.clone();
+                let label_text = concept_data_real.fileName.clone();
                 move || label_text.clone()
             }),
             small_button(
                 "Generate Model",
                 "plus",
                 {
-                    let image_path = image_path.clone();
-                    let image_url = image_url.clone();
+                    let image_path = concept_data_real.normalFilePath.clone();
+                    let image_url = concept_data_real.cloudfrontUrl.clone();
+                    let label_text = concept_data_real.fileName.clone();
                     // let label_text = label_text.clone();
 
                     move |_| {
@@ -124,6 +129,19 @@ pub fn concept_item(
                 generate_active,
             )
             .disabled(move || generate_disabled.get()),
+            small_button(
+                "Inspect Concept",
+                "plus",
+                {
+                    let concept_data_real = concept_data_real.clone();
+
+                    move |_| {
+                        println!("Inspect concept");
+                        selected_concept.set(Some(concept_data_real.clone()));
+                    }
+                },
+                select_active,
+            ),
         )),
     )
     .style(|s| s.width(120.0))
@@ -140,6 +158,7 @@ pub fn concepts_view(
     let generate_field = create_rw_signal("".to_string());
     let generate_active = create_rw_signal(false);
     let generate_disabled = create_rw_signal(false);
+    let selected_concept: RwSignal<Option<File>> = create_rw_signal(None);
 
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let (btn_disabled_tx, btn_disabled_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -187,111 +206,129 @@ pub fn concepts_view(
         }
     });
 
-    v_stack((
-        (label(|| "Concepts"),),
+    h_stack((
         v_stack((
-            h_stack((
-                // rich_text?
-                text_input(generate_field)
-                    .style(|s| s.width(200.0))
-                    .placeholder("Ex. Warrior T-Pose".to_string()),
-                small_button(
-                    if generate_disabled.get() {
-                        "Generating..."
-                    } else {
-                        "Generate"
-                    },
-                    "plus",
-                    {
-                        let generate_field = generate_field.clone();
-
-                        move |_| {
-                            let state_helper = state_2.lock().unwrap();
+            (label(|| "Concepts"),),
+            v_stack((
+                h_stack((
+                    // rich_text?
+                    text_input(generate_field)
+                        .style(|s| s.width(200.0))
+                        .placeholder("Ex. Warrior T-Pose".to_string()),
+                    small_button(
+                        if generate_disabled.get() {
+                            "Generating..."
+                        } else {
+                            "Generate"
+                        },
+                        "plus",
+                        {
                             let generate_field = generate_field.clone();
-                            let btn_disabled_tx = btn_disabled_tx.clone();
 
-                            println!("Preparing generation...");
+                            move |_| {
+                                let state_helper = state_2.lock().unwrap();
+                                let generate_field = generate_field.clone();
+                                let btn_disabled_tx = btn_disabled_tx.clone();
 
-                            generate_disabled.set(true);
+                                println!("Preparing generation...");
 
-                            // Get the data you need before spawning
-                            let renderer_state = state_helper
-                                .renderer_state
-                                .as_ref()
-                                .expect("Couldn't get RendererState")
-                                .lock()
-                                .unwrap();
-                            let selected_project_id = renderer_state
-                                .project_selected
-                                .as_ref()
-                                .expect("Couldn't get current project")
-                                .to_string();
+                                generate_disabled.set(true);
 
-                            let generated_field_val = generate_field.get();
+                                // Get the data you need before spawning
+                                let renderer_state = state_helper
+                                    .renderer_state
+                                    .as_ref()
+                                    .expect("Couldn't get RendererState")
+                                    .lock()
+                                    .unwrap();
+                                let selected_project_id = renderer_state
+                                    .project_selected
+                                    .as_ref()
+                                    .expect("Couldn't get current project")
+                                    .to_string();
 
-                            // Use the runtime handle to spawn
-                            tokio::runtime::Handle::current().spawn(async move {
-                                // Now we can safely use generate_field inside async block
-                                let auth_token = read_auth_token();
+                                let generated_field_val = generate_field.get();
 
-                                println!(
-                                    "Generating... {:?} {:?}",
-                                    auth_token,
-                                    generated_field_val.clone()
-                                );
+                                // Use the runtime handle to spawn
+                                tokio::runtime::Handle::current().spawn(async move {
+                                    // Now we can safely use generate_field inside async block
+                                    let auth_token = read_auth_token();
 
-                                let concept_data =
-                                    generate_concept(auth_token, generated_field_val.clone()).await;
-                                let conceptBase64 = concept_data
-                                    .expect("Couldn't unwrap concept data")
-                                    .generateConcept;
+                                    println!(
+                                        "Generating... {:?} {:?}",
+                                        auth_token,
+                                        generated_field_val.clone()
+                                    );
 
-                                println!("Saving...");
-                                // save texture to sync directory (to be uploaded to S3)
-                                let conceptFilename = get_filename(generated_field_val.clone());
-                                let conceptFilename = conceptFilename + ".png";
+                                    let concept_data =
+                                        generate_concept(auth_token, generated_field_val.clone())
+                                            .await;
+                                    let conceptBase64 = concept_data
+                                        .expect("Couldn't unwrap concept data")
+                                        .generateConcept;
 
-                                save_concept(selected_project_id, conceptBase64, conceptFilename);
+                                    println!("Saving...");
+                                    // save texture to sync directory (to be uploaded to S3)
+                                    let conceptFilename = get_filename(generated_field_val.clone());
+                                    let conceptFilename = conceptFilename + ".png";
 
-                                // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
-                                println!("Syncing...");
+                                    save_concept(
+                                        selected_project_id,
+                                        conceptBase64,
+                                        conceptFilename,
+                                    );
 
-                                btn_disabled_tx.send(false).unwrap();
-                            });
-                        }
-                    },
-                    generate_active,
-                )
-                .disabled(move || generate_disabled.get()),
+                                    // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
+                                    println!("Syncing...");
+
+                                    btn_disabled_tx.send(false).unwrap();
+                                });
+                            }
+                        },
+                        generate_active,
+                    )
+                    .disabled(move || generate_disabled.get()),
+                ))
+                .style(|s| s.margin_bottom(7.0)),
+                scroll(
+                    dyn_stack(
+                        move || concept_data.get(),
+                        move |concept_data| concept_data.id.clone(),
+                        move |concept_data_real| {
+                            let current_concepts = concept_data.get(); // Add this to ensure reactivity
+                            concept_item(
+                                state_3.clone(),
+                                gpu_helper.clone(),
+                                concept_data_real, // for retrieval
+                                selected_concept,  // for updating value
+                            )
+                        },
+                    )
+                    .into_view()
+                    .style(|s| {
+                        s.width(260.0)
+                            .flex_direction(FlexDirection::Row)
+                            .flex_wrap(FlexWrap::Wrap)
+                            .gap(10.0)
+                    }),
+                ),
             ))
-            .style(|s| s.margin_bottom(7.0)),
-            scroll(
-                dyn_stack(
-                    move || concept_data.get(),
-                    move |concept_data| concept_data.id.clone(),
-                    move |concept_data_real| {
-                        let current_concepts = concept_data.get(); // Add this to ensure reactivity
-                        concept_item(
-                            state_3.clone(),
-                            gpu_helper.clone(),
-                            concept_data_real.normalFilePath,
-                            concept_data_real.fileName,
-                            concept_data_real.cloudfrontUrl,
-                            concept_data_real.id,
-                        )
-                    },
-                )
-                .into_view()
-                .style(|s| {
-                    s.width(260.0)
-                        .flex_direction(FlexDirection::Row)
-                        .flex_wrap(FlexWrap::Wrap)
-                        .gap(10.0)
-                }),
-            ),
+            .style(|s| s.width(260.0)),
         ))
-        .style(|s| s.width(260.0)),
+        .style(|s| card_styles(s))
+        .style(|s| s.width(300.0)),
+        dyn_stack(
+            move || selected_concept.get(),
+            move |selected_concept| selected_concept.id.clone(),
+            move |selected_concept_real| {
+                container((dynamic_img(
+                    selected_concept_real.normalFilePath.clone(),
+                    selected_concept_real.fileName.clone(),
+                    1024.0,
+                    1024.0,
+                )
+                .style(|s| s.width(1024.0).height(1024.0).margin_left(50.0)),))
+            },
+        ),
     ))
-    .style(|s| card_styles(s))
-    .style(|s| s.width(300.0))
 }

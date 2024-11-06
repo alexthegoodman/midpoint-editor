@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use midpoint_engine::core::Viewport::Viewport;
-use midpoint_engine::floem::common::{card_styles, create_icon, nav_button};
+use midpoint_engine::floem::common::{alert, card_styles, create_icon, nav_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
 use midpoint_engine::floem::keyboard::{Key, KeyCode, NamedKey};
 use midpoint_engine::floem::peniko::Color;
@@ -78,15 +78,30 @@ pub fn project_browser(
     viewport: Arc<Mutex<Viewport>>,
     manager: Arc<WebSocketManager>,
 ) -> impl View {
-    // TODO: Start CommonOS File Manager to use Midpoint
+    // TODO: Alert for Start CommonOS File Manager to use Midpoint
     let projects = get_projects().expect("Couldn't get projects");
-    // v_stack((,))).style(|s| s.height_full())
 
     let gpu_2 = Arc::clone(&gpu_helper);
 
-    let project_list = create_rw_signal(projects); // for long lists technically
+    let project_list = create_rw_signal(projects);
+    let loading_project = create_rw_signal(false);
 
     v_stack((
+        dyn_container(
+            move || loading_project.get(),
+            move |loading_project_real| {
+                if (loading_project_real) {
+                    alert(
+                        midpoint_engine::floem::common::AlertVariant::Info,
+                        "Loading your project...".to_string(),
+                    )
+                    .into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        )
+        .into_view(),
         (label(|| "Select a Project").style(|s| s.margin_bottom(4.0))),
         scroll(
             dyn_stack(
@@ -105,6 +120,12 @@ pub fn project_browser(
                         let gpu_2 = gpu_2.clone();
 
                         move |_| {
+                            if (loading_project.get()) {
+                                return EventPropagation::Continue;
+                            }
+
+                            loading_project.set(true);
+
                             // join the WebSocket group for this project
                             manager.join_group(); // locks and drops the state_helper
 
