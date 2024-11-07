@@ -233,6 +233,7 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         // draw skeleton parts
                         for part in &engine.skeleton_parts {
                             for bone in &part.bones {
+                                // bone
                                 bone.transform.update_uniform_buffer(&gpu_resources.queue);
                                 render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
                                 render_pass.set_bind_group(1, &bone.bind_group, &[]);
@@ -244,6 +245,28 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                                 );
 
                                 render_pass.draw_indexed(0..bone.num_indices as u32, 0, 0..1);
+
+                                // joint sphere
+                                bone.joint_sphere
+                                    .transform
+                                    .update_uniform_buffer(&gpu_resources.queue);
+                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                                render_pass.set_bind_group(1, &bone.joint_sphere.bind_group, &[]);
+
+                                render_pass.set_vertex_buffer(
+                                    0,
+                                    bone.joint_sphere.vertex_buffer.slice(..),
+                                );
+                                render_pass.set_index_buffer(
+                                    bone.joint_sphere.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
+
+                                render_pass.draw_indexed(
+                                    0..bone.joint_sphere.index_count as u32,
+                                    0,
+                                    0..1,
+                                );
                             }
                         }
                     } else if (engine.current_view == "scene".to_string()) {

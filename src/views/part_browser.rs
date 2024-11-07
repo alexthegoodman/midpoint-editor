@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
+use midpoint_engine::animations::render_skeleton::create_joint_rotations;
 use midpoint_engine::animations::skeleton::SkeletonPart;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
@@ -19,7 +20,7 @@ use midpoint_engine::floem::IntoView;
 use midpoint_engine::floem_renderer::gpu_resources;
 use midpoint_engine::handlers::handle_add_skeleton_part;
 use midpoint_engine::helpers::saved_data::File;
-use nalgebra::Point3;
+use nalgebra::{Point3, Vector3};
 use tokio::spawn;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
@@ -88,6 +89,7 @@ pub fn part_item(
                         .find(|sp| sp.id == part_id)
                         .expect("Couldn't find selected part");
                     let joints = selected_part_data.joints.clone();
+                    let joints_2 = selected_part_data.joints.clone();
                     let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
                         let position = Point3::new(
                             joint.local_position[0], // world pos instead?
@@ -96,6 +98,9 @@ pub fn part_item(
                         );
                         (joint.id.clone(), position)
                     }));
+                    let joint_rotations = create_joint_rotations(joints_2, &joint_positions);
+
+                    println!("joint_rotations {:?}", joint_rotations);
 
                     handle_add_skeleton_part(
                         state_helper
@@ -109,6 +114,7 @@ pub fn part_item(
                         [0.0, 0.0, 0.0],
                         joints,
                         &joint_positions,
+                        &joint_rotations,
                     );
                 },
                 active_btn,
