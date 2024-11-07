@@ -234,8 +234,8 @@ pub fn joint_item(
 
                         // Update local position relative to new parent
                         // perhaps the adjustment should be manual?
-                        // updated_joint.local_position =
-                        //     calculate_new_local_position(new_data, &updated_joint, &joint);
+                        // updated_joint.world_position =
+                        //     calculate_new_world_position(new_data, &updated_joint, &joint);
 
                         // Remove and reinsert the joint at new position
 
@@ -306,7 +306,7 @@ fn get_all_child_ids(joints: &mut Vec<Joint>, parent_id: &str) -> Vec<String> {
     children
 }
 
-fn calculate_new_local_position(
+fn calculate_new_world_position(
     joints: &mut Vec<Joint>,
     child: &Joint,
     new_parent: &Joint,
@@ -325,7 +325,7 @@ fn calculate_new_local_position(
 }
 
 fn get_world_position(joints: &mut Vec<Joint>, joint: &Joint) -> [f32; 3] {
-    let mut world_pos = joint.local_position;
+    let mut world_pos = joint.world_position;
     let mut current_joint = joint;
 
     // Walk up the hierarchy accumulating transforms
@@ -333,9 +333,9 @@ fn get_world_position(joints: &mut Vec<Joint>, joint: &Joint) -> [f32; 3] {
         if let Some(parent) = joints.iter().find(|j| &j.id == parent_id) {
             // Add parent's position to accumulate world position
             // Note: This is simplified - you should properly apply orientation/scale
-            world_pos[0] += parent.local_position[0];
-            world_pos[1] += parent.local_position[1];
-            world_pos[2] += parent.local_position[2];
+            world_pos[0] += parent.world_position[0];
+            world_pos[1] += parent.world_position[1];
+            world_pos[2] += parent.world_position[2];
             current_joint = parent;
         } else {
             break;
@@ -354,9 +354,9 @@ fn get_world_position(joints: &mut Vec<Joint>, joint: &Joint) -> [f32; 3] {
 //             // let child = joints.get_mut(child_idx).expect("Couldn't get child");
 //             if let Some(parent_id) = &child.parent_id {
 //                 if let Some(parent) = joints.iter().find(|j| &j.id == parent_id) {
-//                     let new_local_pos = calculate_new_local_position(joints, child, parent);
-//                     // joints[child_idx].local_position = new_local_pos;
-//                     child.set_local_position(new_local_pos);
+//                     let new_local_pos = calculate_new_world_position(joints, child, parent);
+//                     // joints[child_idx].world_position = new_local_pos;
+//                     child.set_world_position(new_local_pos);
 //                 }
 //             }
 //         }

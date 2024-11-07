@@ -92,9 +92,9 @@ pub fn part_item(
                     let joints_2 = selected_part_data.joints.clone();
                     let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
                         let position = Point3::new(
-                            joint.local_position[0], // world pos instead?
-                            joint.local_position[1],
-                            joint.local_position[2],
+                            joint.world_position[0], // world pos instead?
+                            joint.world_position[1],
+                            joint.world_position[2],
                         );
                         (joint.id.clone(), position)
                     }));
