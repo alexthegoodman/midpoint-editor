@@ -392,7 +392,17 @@ fn handle_cursor_moved(
             }
             if (renderer_state.mouse_state.drag_started || renderer_state.mouse_state.is_dragging) {
                 if renderer_state.object_selected.is_some() && renderer_state.ray_intersecting {
-                    renderer_state.dragging_gizmo = true;
+                    let ray_arrow = renderer_state.gizmo.arrows.iter().find(|a| {
+                        a.id == renderer_state
+                            .ray_component_id
+                            .expect("Couldn't get ray component id")
+                    });
+
+                    if ray_arrow.is_some() {
+                        renderer_state.gizmo_drag_axis =
+                            Some(ray_arrow.expect("Couldn't get ray arrow").axis);
+                        renderer_state.dragging_gizmo = true;
+                    }
                 }
                 if renderer_state.object_selected.is_some() && renderer_state.dragging_gizmo {
                     // println!("Dragging while component selected!");
@@ -427,12 +437,6 @@ fn handle_cursor_moved(
 
                     let mouse_state = renderer_state.mouse_state.clone();
 
-                    let ray_arrow = renderer_state.gizmo.arrows.iter().find(|a| {
-                        a.id == renderer_state
-                            .ray_component_id
-                            .expect("Couldn't get ray component")
-                    });
-
                     let ray_component = saved_state
                         .levels
                         .as_ref()
@@ -450,8 +454,12 @@ fn handle_cursor_moved(
                                 .to_string()
                         });
 
-                    if ray_arrow.is_some() {
-                        let ray_arrow = ray_arrow.expect("Couldn't get ray arrow");
+                    // if we are pointing at a gizmo arrow
+                    if renderer_state.dragging_gizmo {
+                        // let ray_arrow = ray_arrow.expect("Couldn't get ray arrow");
+                        let ray_arrow_axis = renderer_state
+                            .gizmo_drag_axis
+                            .expect("Couldn't get gizmo axis");
 
                         // println!("Ray intersection! {:?}", ray_arrow.axis);
                         let current_transform = match selected_component.kind.as_ref().unwrap() {
@@ -483,32 +491,13 @@ fn handle_cursor_moved(
                             }
                         };
 
-                        // Calculate movement based on axis constraint
-                        // let movement = match ray_arrow.axis {
-                        //     0 => [dx as f32, 0.0, 0.0],       // X axis only
-                        //     1 => [0.0, dy as f32, 0.0],       // Y axis only
-                        //     2 => [0.0, 0.0, dx as f32],       // Z axis only
-                        //     _ => [dx as f32, dy as f32, 0.0], // Unconstrained (shouldn't happen with gizmo)
-                        // };
-
-                        // // Create the new transform with the constrained movement
-                        // let savable_transform: Option<[[f32; 3]; 3]> = Some([
-                        //     [
-                        //         current_transform[0][0] + movement[0],
-                        //         current_transform[0][1] - movement[1],
-                        //         current_transform[0][2] - movement[2],
-                        //     ],
-                        //     current_transform[1].into(), // Keep rotation unchanged
-                        //     current_transform[2].into(), // Keep scale unchanged
-                        // ]);
-
                         // Get camera forward vector (assuming you have access to camera)
                         let camera_forward = camera.forward_vector();
                         let camera_up = camera.up_vector();
                         let camera_right = camera.right_vector();
 
                         // Determine if we're looking from the "back" of an axis
-                        let view_alignment = match ray_arrow.axis {
+                        let view_alignment = match ray_arrow_axis {
                             0 => camera_right.dot(&Vector3::new(1.0, 0.0, 0.0)).signum(), // X axis
                             1 => camera_up.dot(&Vector3::new(0.0, 1.0, 0.0)).signum(),    // Y axis
                             2 => -camera_forward.dot(&Vector3::new(0.0, 0.0, 1.0)).signum(), // Z axis
@@ -516,7 +505,7 @@ fn handle_cursor_moved(
                         };
 
                         // Calculate movement based on axis constraint and view alignment
-                        let movement = match ray_arrow.axis {
+                        let movement = match ray_arrow_axis {
                             0 => [dx as f32 * view_alignment, 0.0, 0.0], // X axis
                             1 => [0.0, dy as f32 * view_alignment, 0.0], // Y axis
                             2 => [0.0, 0.0, dx as f32 * view_alignment], // Z axis
@@ -617,6 +606,7 @@ fn handle_cursor_moved(
 
                     if ray_component.is_some() {
                         // println!("Component intersection...");
+                        // TODO: select component
                     }
                 }
             }
