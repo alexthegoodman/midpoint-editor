@@ -229,7 +229,9 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         render_pass.draw_indexed(0..grid.index_count, 0, 0..1);
                     }
 
-                    if (engine.current_view == "animation_part".to_string()) {
+                    if (engine.current_view == "animation_part".to_string()
+                        || engine.current_view == "animation_skeleton".to_string())
+                    {
                         // draw skeleton parts
                         for part in &engine.skeleton_parts {
                             for bone in &part.bones {

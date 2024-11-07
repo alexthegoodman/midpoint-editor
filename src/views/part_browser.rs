@@ -98,9 +98,8 @@ pub fn part_item(
                         );
                         (joint.id.clone(), position)
                     }));
-                    let joint_rotations = create_joint_rotations(joints_2, &joint_positions);
-
-                    println!("joint_rotations {:?}", joint_rotations);
+                    // let joint_rotations = create_joint_rotations(joints_2, &joint_positions);
+                    // println!("joint_rotations {:?}", joint_rotations);
 
                     handle_add_skeleton_part(
                         state_helper
@@ -114,7 +113,7 @@ pub fn part_item(
                         [0.0, 0.0, 0.0],
                         joints,
                         &joint_positions,
-                        &joint_rotations,
+                        // &joint_rotations,
                     );
                 },
                 active_btn,

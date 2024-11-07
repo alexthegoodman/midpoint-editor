@@ -263,15 +263,15 @@ pub fn joint_item(
             .box_shadow_spread(2)
     })
     .style(|s| {
-        s.width(220.0)
+        s.width(260.0)
             // .border_radius(5.0)
             .align_items(AlignItems::Center)
-            .padding_vert(2)
+            .padding_vert(3)
             .background(Color::rgb(1.0, 1.0, 1.0))
             .border_bottom(1)
             .margin_bottom(0)
-            .border_color(Color::rgb(0.5, 0.5, 0.5))
-            .hover(|s| s.background(Color::rgb(0.8, 0.8, 0.8)))
+            .border_color(Color::rgb(0.3, 0.3, 0.3))
+            .hover(|s| s.background(Color::rgb(0.5, 0.5, 0.5)))
             .active(|s| s.background(Color::ROYAL_BLUE))
     })
 }
@@ -306,44 +306,44 @@ fn get_all_child_ids(joints: &mut Vec<Joint>, parent_id: &str) -> Vec<String> {
     children
 }
 
-fn calculate_new_world_position(
-    joints: &mut Vec<Joint>,
-    child: &Joint,
-    new_parent: &Joint,
-) -> [f32; 3] {
-    // Calculate the difference between world positions
-    // This is a simplified example - you'll need to implement proper
-    // transformation math based on your coordinate system
-    let child_world_pos = get_world_position(joints, child);
-    let parent_world_pos = get_world_position(joints, new_parent);
+// fn calculate_new_world_position(
+//     joints: &mut Vec<Joint>,
+//     child: &Joint,
+//     new_parent: &Joint,
+// ) -> [f32; 3] {
+//     // Calculate the difference between world positions
+//     // This is a simplified example - you'll need to implement proper
+//     // transformation math based on your coordinate system
+//     let child_world_pos = get_world_position(joints, child);
+//     let parent_world_pos = get_world_position(joints, new_parent);
 
-    [
-        child_world_pos[0] - parent_world_pos[0],
-        child_world_pos[1] - parent_world_pos[1],
-        child_world_pos[2] - parent_world_pos[2],
-    ]
-}
+//     [
+//         child_world_pos[0] - parent_world_pos[0],
+//         child_world_pos[1] - parent_world_pos[1],
+//         child_world_pos[2] - parent_world_pos[2],
+//     ]
+// }
 
-fn get_world_position(joints: &mut Vec<Joint>, joint: &Joint) -> [f32; 3] {
-    let mut world_pos = joint.world_position;
-    let mut current_joint = joint;
+// fn get_world_position(joints: &mut Vec<Joint>, joint: &Joint) -> [f32; 3] {
+//     let mut world_pos = joint.world_position;
+//     let mut current_joint = joint;
 
-    // Walk up the hierarchy accumulating transforms
-    while let Some(parent_id) = &current_joint.parent_id {
-        if let Some(parent) = joints.iter().find(|j| &j.id == parent_id) {
-            // Add parent's position to accumulate world position
-            // Note: This is simplified - you should properly apply orientation/scale
-            world_pos[0] += parent.world_position[0];
-            world_pos[1] += parent.world_position[1];
-            world_pos[2] += parent.world_position[2];
-            current_joint = parent;
-        } else {
-            break;
-        }
-    }
+//     // Walk up the hierarchy accumulating transforms
+//     while let Some(parent_id) = &current_joint.parent_id {
+//         if let Some(parent) = joints.iter().find(|j| &j.id == parent_id) {
+//             // Add parent's position to accumulate world position
+//             // Note: This is simplified - you should properly apply orientation/scale
+//             world_pos[0] += parent.world_position[0];
+//             world_pos[1] += parent.world_position[1];
+//             world_pos[2] += parent.world_position[2];
+//             current_joint = parent;
+//         } else {
+//             break;
+//         }
+//     }
 
-    world_pos
-}
+//     world_pos
+// }
 
 // fn update_child_transforms(joints: &mut Vec<Joint>, child_ids: &[String]) {
 //     // Update the local transforms of all affected children

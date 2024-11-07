@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
@@ -15,7 +16,9 @@ use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, label, scroll, v_stack,
 };
 use midpoint_engine::floem::IntoView;
+use midpoint_engine::handlers::handle_add_skeleton_part;
 use midpoint_engine::helpers::saved_data::File;
+use nalgebra::Point3;
 use tokio::spawn;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
@@ -30,19 +33,144 @@ use crate::helpers::auth::read_auth_token;
 use crate::helpers::textures::save_texture;
 use crate::helpers::utilities::get_filename;
 
-pub fn skeleton_item(label_text: String) -> impl View {
+pub fn skeleton_item(
+    state_helper: Arc<Mutex<StateHelper>>,
+    gpu_helper: Arc<Mutex<GpuHelper>>,
+    viewport: Arc<Mutex<Viewport>>,
+    skeleton_id: String,
+    label_text: String,
+    skeleton_selected_signal: RwSignal<bool>,
+    selected_skeleton_id_signal: RwSignal<String>,
+) -> impl View {
     let active_btn = create_rw_signal(false);
 
     v_stack(
         ((
-            // dynamic_img(image_path, label_text.clone())
-            //     .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
             label(move || label_text.clone()),
             small_button(
                 "Edit Assembly",
                 "plus",
                 move |_| {
-                    // renderer_state.current_view = "animation_skeleton".to_string();
+                    let mut state_helper_guard = state_helper.lock().unwrap();
+                    let mut renderer_state = state_helper_guard
+                        .renderer_state
+                        .as_mut()
+                        .expect("Couldn't get RendererState")
+                        .lock()
+                        .unwrap();
+
+                    renderer_state.current_view = "animation_skeleton".to_string();
+
+                    skeleton_selected_signal.set(true);
+                    selected_skeleton_id_signal.set(skeleton_id.clone());
+
+                    drop(renderer_state);
+                    drop(state_helper_guard);
+
+                    let state_helper = state_helper.lock().unwrap();
+                    let gpu_helper = gpu_helper.lock().unwrap();
+                    let gpu_resources = gpu_helper
+                        .gpu_resources
+                        .as_ref()
+                        .expect("Couldn't get gpu resources");
+                    let saved_state = state_helper
+                        .saved_state
+                        .as_ref()
+                        .expect("Couldn't get SavedState")
+                        .lock()
+                        .unwrap();
+
+                    // Find and clone the necessary data before the iterations
+                    let selected_data = saved_state
+                        .skeletons
+                        .iter()
+                        .find(|sp| sp.id == skeleton_id)
+                        .expect("Couldn't find selected skeleton");
+
+                    let connections = selected_data.connections.clone();
+                    let skeleton_parts = saved_state.skeleton_parts.clone();
+
+                    // Handle root part first
+                    let display_part = skeleton_parts
+                        .iter()
+                        .find(|sp| {
+                            &sp.id
+                                == selected_data
+                                    .root_part_id
+                                    .as_ref()
+                                    .expect("Couldn't get root part id")
+                        })
+                        .expect("Couldn't find display part");
+
+                    let part_id = display_part.id.clone();
+                    let joints = display_part.joints.clone();
+                    let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
+                        let position = Point3::new(
+                            joint.world_position[0],
+                            joint.world_position[1],
+                            joint.world_position[2],
+                        );
+                        (joint.id.clone(), position)
+                    }));
+
+                    handle_add_skeleton_part(
+                        state_helper
+                            .renderer_state
+                            .as_ref()
+                            .expect("Couldn't get RendererState")
+                            .clone(),
+                        &gpu_resources.device,
+                        &gpu_resources.queue,
+                        part_id,
+                        [0.0, 0.0, 0.0],
+                        joints,
+                        &joint_positions,
+                    );
+
+                    // Now handle the connections using the cloned data
+                    connections.iter().for_each(|connection| {
+                        let display_part = skeleton_parts
+                            .iter()
+                            .find(|sp| {
+                                &sp.id
+                                    == connection
+                                        .child_part_id
+                                        .as_ref()
+                                        .expect("Couldn't get child part id")
+                            })
+                            .expect("Couldn't find display part");
+
+                        let part_id = display_part.id.clone();
+                        let joints = display_part.joints.clone();
+                        let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
+                            let position = Point3::new(
+                                joint.world_position[0],
+                                joint.world_position[1],
+                                joint.world_position[2],
+                            );
+                            (joint.id.clone(), position)
+                        }));
+
+                        let position = connection
+                            .transform_offset
+                            .as_ref()
+                            .map(|transform| transform.position)
+                            .unwrap_or([0.0, 0.0, 0.0]);
+
+                        handle_add_skeleton_part(
+                            state_helper
+                                .renderer_state
+                                .as_ref()
+                                .expect("Couldn't get RendererState")
+                                .clone(),
+                            &gpu_resources.device,
+                            &gpu_resources.queue,
+                            part_id,
+                            position,
+                            joints,
+                            &joint_positions,
+                        );
+                    });
                 },
                 active_btn,
             ),
@@ -103,7 +231,15 @@ pub fn skeleton_browser(
             move |skeleton_data| skeleton_data.id.clone(),
             move |skeleton_data_real| {
                 let current_textures = skeleton_data.get(); // Add this to ensure reactivity
-                skeleton_item(skeleton_data_real.name)
+                skeleton_item(
+                    state_2.clone(),
+                    gpu_helper.clone(),
+                    viewport.clone(),
+                    skeleton_data_real.id,
+                    skeleton_data_real.name,
+                    skeleton_selected_signal,
+                    selected_skeleton_id_signal,
+                )
             },
         )
         .into_view()
