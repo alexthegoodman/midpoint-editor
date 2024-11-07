@@ -52,8 +52,6 @@ pub fn animations_view(
     let skeleton_selected_signal = create_rw_signal(false);
     let selected_skeleton_id_signal = create_rw_signal(String::new());
 
-    let keyframe_timeline = create_test_timeline();
-
     let active_1 = create_rw_signal(false);
     let active_2 = create_rw_signal(false);
 
@@ -197,20 +195,24 @@ pub fn animations_view(
             move || skeleton_selected_signal.get(),
             move |skeleton_selected_real| {
                 if skeleton_selected_real {
-                    skeleton_properties(state_4.clone(), gpu_3.clone(), viewport_3.clone())
-                        .into_any()
+                    let keyframe_timeline = create_test_timeline();
+
+                    h_stack((
+                        skeleton_properties(state_4.clone(), gpu_3.clone(), viewport_3.clone()),
+                        v_stack((
+                            h_stack((
+                                small_button("Play", "plus", |_| {}, active_1),
+                                small_button("Insert Keyframe", "plus", |_| {}, active_2),
+                            ))
+                            .style(|s| s.margin_top(300.0)),
+                            keyframe_timeline,
+                        )),
+                    ))
+                    .into_any()
                 } else {
                     empty().into_any()
                 }
             },
         ),
-        v_stack((
-            h_stack((
-                small_button("Test", "plus", |_| {}, active_1),
-                small_button("Test", "plus", |_| {}, active_2),
-            ))
-            .style(|s| s.margin_top(300.0)),
-            keyframe_timeline,
-        )),
     ))
 }

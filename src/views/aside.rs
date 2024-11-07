@@ -93,7 +93,7 @@ pub fn project_tab_interface(
                     _ => "plus",
                 };
                 let destination_view = match item {
-                    "Animations" => "animation_rigging", // "animation_rigging" and "animation_motion"
+                    "Animations" => "animation", // "animation" (for just the sidebar) "animation_part", "animation_skeleton", or "animation_retarget"
                     "Concepts" => "concepts",
                     "Scene" => "scene",
                     "Nodes" => "nodes",

@@ -77,7 +77,11 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                 .unwrap();
 
             if let Some(gpu_resources) = &handle.gpu_resources {
-                if engine.current_view == "scene".to_string() {
+                if engine.current_view == "scene".to_string()
+                    || engine.current_view == "animation_part".to_string()
+                    || engine.current_view == "animation_skeleton".to_string()
+                    || engine.current_view == "animation_retarget".to_string()
+                {
                     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: None,
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -131,12 +135,23 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // Render partial screen content
                     // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
-                    render_pass.set_scissor_rect(
-                        500,
-                        0,
-                        window_size.width - 500,
-                        window_size.height,
-                    );
+                    if (engine.current_view == "animation_skeleton".to_string()) {
+                        // height minus timeline, width minus sidebar
+                        render_pass.set_scissor_rect(
+                            500,
+                            0,
+                            window_size.width - 500,
+                            window_size.height - 500,
+                        );
+                    } else {
+                        // full height, width minus sidebar
+                        render_pass.set_scissor_rect(
+                            500,
+                            0,
+                            window_size.width - 500,
+                            window_size.height,
+                        );
+                    }
 
                     render_pass.set_pipeline(
                         &handle
@@ -214,73 +229,80 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         render_pass.draw_indexed(0..grid.index_count, 0, 0..1);
                     }
 
-                    // // draw pyramids
-                    // for pyramid in &state.pyramids {
-                    //     pyramid.update_uniform_buffer(&queue);
-                    //     render_pass.set_bind_group(0, &camera_bind_group, &[]);
-                    //     render_pass.set_bind_group(1, &pyramid.bind_group, &[]);
+                    if (engine.current_view == "animation_part".to_string()) {
+                        // draw skeleton parts
+                        for part in &engine.skeleton_parts {
+                            for bone in &part.bones {
+                                bone.transform.update_uniform_buffer(&gpu_resources.queue);
+                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                                render_pass.set_bind_group(1, &bone.bind_group, &[]);
 
-                    //     render_pass.set_vertex_buffer(0, pyramid.vertex_buffer.slice(..));
-                    //     render_pass.set_index_buffer(pyramid.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                                render_pass.set_vertex_buffer(0, bone.vertex_buffer.slice(..));
+                                render_pass.set_index_buffer(
+                                    bone.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
 
-                    //     render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
-                    // }
-
-                    // draw cubes
-                    for cube in &engine.cubes {
-                        cube.transform.update_uniform_buffer(&gpu_resources.queue);
-                        render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                        render_pass.set_bind_group(1, &cube.bind_group, &[]);
-
-                        render_pass.set_vertex_buffer(0, cube.vertex_buffer.slice(..));
-                        render_pass.set_index_buffer(
-                            cube.index_buffer.slice(..),
-                            wgpu::IndexFormat::Uint16,
-                        );
-
-                        render_pass.draw_indexed(0..cube.index_count as u32, 0, 0..1);
-                    }
-
-                    for model in &engine.models {
-                        for mesh in &model.meshes {
-                            mesh.transform.update_uniform_buffer(&gpu_resources.queue);
+                                render_pass.draw_indexed(0..bone.num_indices as u32, 0, 0..1);
+                            }
+                        }
+                    } else if (engine.current_view == "scene".to_string()) {
+                        // draw cubes
+                        for cube in &engine.cubes {
+                            cube.transform.update_uniform_buffer(&gpu_resources.queue);
                             render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                            render_pass.set_bind_group(1, &mesh.bind_group, &[]);
-                            render_pass.set_bind_group(2, &mesh.texture_bind_group, &[]);
+                            render_pass.set_bind_group(1, &cube.bind_group, &[]);
 
-                            render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                            render_pass.set_vertex_buffer(0, cube.vertex_buffer.slice(..));
                             render_pass.set_index_buffer(
-                                mesh.index_buffer.slice(..),
+                                cube.index_buffer.slice(..),
                                 wgpu::IndexFormat::Uint16,
                             );
 
-                            render_pass.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
+                            render_pass.draw_indexed(0..cube.index_count as u32, 0, 0..1);
                         }
-                    }
 
-                    for landscape in &engine.landscapes {
-                        if (landscape.texture_bind_group.is_some()) {
-                            landscape
-                                .transform
-                                .update_uniform_buffer(&gpu_resources.queue);
-                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                            render_pass.set_bind_group(1, &landscape.bind_group, &[]);
-                            render_pass.set_bind_group(
-                                2,
-                                &landscape
-                                    .texture_bind_group
-                                    .as_ref()
-                                    .expect("No landscape texture bind group"),
-                                &[],
-                            );
+                        for model in &engine.models {
+                            for mesh in &model.meshes {
+                                mesh.transform.update_uniform_buffer(&gpu_resources.queue);
+                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                                render_pass.set_bind_group(1, &mesh.bind_group, &[]);
+                                render_pass.set_bind_group(2, &mesh.texture_bind_group, &[]);
 
-                            render_pass.set_vertex_buffer(0, landscape.vertex_buffer.slice(..));
-                            render_pass.set_index_buffer(
-                                landscape.index_buffer.slice(..),
-                                wgpu::IndexFormat::Uint32,
-                            );
+                                render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                                render_pass.set_index_buffer(
+                                    mesh.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
 
-                            render_pass.draw_indexed(0..landscape.index_count as u32, 0, 0..1);
+                                render_pass.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
+                            }
+                        }
+
+                        for landscape in &engine.landscapes {
+                            if (landscape.texture_bind_group.is_some()) {
+                                landscape
+                                    .transform
+                                    .update_uniform_buffer(&gpu_resources.queue);
+                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                                render_pass.set_bind_group(1, &landscape.bind_group, &[]);
+                                render_pass.set_bind_group(
+                                    2,
+                                    &landscape
+                                        .texture_bind_group
+                                        .as_ref()
+                                        .expect("No landscape texture bind group"),
+                                    &[],
+                                );
+
+                                render_pass.set_vertex_buffer(0, landscape.vertex_buffer.slice(..));
+                                render_pass.set_index_buffer(
+                                    landscape.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint32,
+                                );
+
+                                render_pass.draw_indexed(0..landscape.index_count as u32, 0, 0..1);
+                            }
                         }
                     }
                 }

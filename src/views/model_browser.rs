@@ -35,6 +35,7 @@ pub fn model_item(
     model_id: String,
 ) -> impl View {
     let active = create_rw_signal(false);
+    let active_2 = create_rw_signal(false);
 
     v_stack((
         label(move || label_text.clone()),
@@ -114,6 +115,16 @@ pub fn model_item(
                         .get();
 
                     state_helper.save_saved_state(project_id, saved_state);
+                }
+            },
+            active,
+        ),
+        small_button(
+            "Add Skeleton",
+            "plus",
+            {
+                move |_| {
+                    // renderer_state.current_view = "animation_retarget".to_string();
                 }
             },
             active,

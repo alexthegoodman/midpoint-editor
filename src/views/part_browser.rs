@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
@@ -15,7 +16,10 @@ use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, label, scroll, v_stack,
 };
 use midpoint_engine::floem::IntoView;
+use midpoint_engine::floem_renderer::gpu_resources;
+use midpoint_engine::handlers::handle_add_skeleton_part;
 use midpoint_engine::helpers::saved_data::File;
+use nalgebra::Point3;
 use tokio::spawn;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
@@ -31,6 +35,9 @@ use crate::helpers::textures::save_texture;
 use crate::helpers::utilities::get_filename;
 
 pub fn part_item(
+    state_helper: Arc<Mutex<StateHelper>>,
+    gpu_helper: Arc<Mutex<GpuHelper>>,
+    viewport: Arc<Mutex<Viewport>>,
     part_id: String,
     label_text: String,
     part_selected_signal: RwSignal<bool>,
@@ -47,8 +54,62 @@ pub fn part_item(
                 "Edit Joints",
                 "plus",
                 move |_| {
+                    let mut state_helper_guard = state_helper.lock().unwrap();
+                    let mut renderer_state = state_helper_guard
+                        .renderer_state
+                        .as_mut()
+                        .expect("Couldn't get RendererState")
+                        .lock()
+                        .unwrap();
+
+                    renderer_state.current_view = "animation_part".to_string();
+
                     part_selected_signal.set(true);
                     selected_part_id_signal.set(part_id.clone());
+
+                    drop(renderer_state);
+                    drop(state_helper_guard);
+
+                    let state_helper = state_helper.lock().unwrap();
+                    let gpu_helper = gpu_helper.lock().unwrap();
+                    let gpu_resources = gpu_helper
+                        .gpu_resources
+                        .as_ref()
+                        .expect("Couldn't get gpu resources");
+                    let saved_state = state_helper
+                        .saved_state
+                        .as_ref()
+                        .expect("Couldn't get SavedState");
+                    let saved_state = saved_state.lock().unwrap();
+
+                    let selected_part_data = saved_state
+                        .skeleton_parts
+                        .iter()
+                        .find(|sp| sp.id == part_id)
+                        .expect("Couldn't find selected part");
+                    let joints = selected_part_data.joints.clone();
+                    let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
+                        let position = Point3::new(
+                            joint.local_position[0], // world pos instead?
+                            joint.local_position[1],
+                            joint.local_position[2],
+                        );
+                        (joint.id.clone(), position)
+                    }));
+
+                    handle_add_skeleton_part(
+                        state_helper
+                            .renderer_state
+                            .as_ref()
+                            .expect("Couldn't get RendererState")
+                            .clone(),
+                        &gpu_resources.device,
+                        &gpu_resources.queue,
+                        part_id.clone(),
+                        [0.0, 0.0, 0.0],
+                        joints,
+                        &joint_positions,
+                    );
                 },
                 active_btn,
             ),
@@ -65,6 +126,11 @@ pub fn part_browser(
     selected_part_id_signal: RwSignal<String>,
 ) -> impl View {
     let state_2 = Arc::clone(&state_helper);
+    let state_3 = Arc::clone(&state_helper);
+
+    let gpu_2 = Arc::clone(&gpu_helper);
+
+    let viewport_2 = Arc::clone(&viewport);
 
     let generate_field = create_rw_signal("".to_string());
     let generate_active = create_rw_signal(false);
@@ -182,14 +248,21 @@ pub fn part_browser(
             dyn_stack(
                 move || part_data.get(),
                 move |part_data| part_data.id.clone(),
-                move |part_data_real| {
-                    let current_textures = part_data.get(); // Add this to ensure reactivity
-                    part_item(
-                        part_data_real.id,
-                        part_data_real.name,
-                        part_selected_signal,
-                        selected_part_id_signal,
-                    )
+                {
+                    let state_helper = state_3.clone();
+
+                    move |part_data_real: SkeletonPart| {
+                        let current_textures = part_data.get(); // Add this to ensure reactivity
+                        part_item(
+                            state_helper.clone(),
+                            gpu_2.clone(),
+                            viewport_2.clone(),
+                            part_data_real.id,
+                            part_data_real.name,
+                            part_selected_signal,
+                            selected_part_id_signal,
+                        )
+                    }
                 },
             )
             .into_view()

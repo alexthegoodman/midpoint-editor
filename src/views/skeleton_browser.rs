@@ -38,7 +38,14 @@ pub fn skeleton_item(label_text: String) -> impl View {
             // dynamic_img(image_path, label_text.clone())
             //     .style(|s| s.width(120.0).height(120.0).border_radius(5.0)),
             label(move || label_text.clone()),
-            small_button("Edit Assembly", "plus", move |_| {}, active_btn),
+            small_button(
+                "Edit Assembly",
+                "plus",
+                move |_| {
+                    // renderer_state.current_view = "animation_skeleton".to_string();
+                },
+                active_btn,
+            ),
         )),
     )
     .style(|s| s.width(120.0))
