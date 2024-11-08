@@ -55,7 +55,7 @@ pub fn update_position(
     let mut component_data = selected_object_data.get();
     let selected_component = component_data.clone();
 
-    let current_position = renderer_state.gizmo.transform.position;
+    let current_position = renderer_state.translation_gizmo.transform.position;
 
     // for X only
     let mut new_position = current_position.clone();
@@ -80,7 +80,10 @@ pub fn update_position(
     let new_position = [new_position.x, new_position.y, new_position.z];
 
     // update gizmo transform position
-    renderer_state.gizmo.transform.update_position(new_position);
+    renderer_state
+        .translation_gizmo
+        .transform
+        .update_position(new_position);
 
     // update_arrow_collider_position
     renderer_state.update_arrow_collider_position(new_position);

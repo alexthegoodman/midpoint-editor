@@ -71,7 +71,7 @@ pub fn component_item(
                     // gizmo displays automatically (but need to update gizmo position)
                     let component_data = component_data.clone();
                     renderer_state
-                        .gizmo
+                        .translation_gizmo
                         .transform
                         .update_position(component_data.generic_properties.position);
                     // don't forget the rapier positions

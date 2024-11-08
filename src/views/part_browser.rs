@@ -56,6 +56,14 @@ pub fn part_item(
                 "plus",
                 move |_| {
                     let mut state_helper_guard = state_helper.lock().unwrap();
+
+                    let destination_view = "animation_part".to_string();
+
+                    let current_view_signal = state_helper_guard
+                        .current_view_signal
+                        .expect("Couldn't get current view signal");
+                    current_view_signal.set(destination_view.clone());
+
                     let mut renderer_state = state_helper_guard
                         .renderer_state
                         .as_mut()
@@ -63,7 +71,7 @@ pub fn part_item(
                         .lock()
                         .unwrap();
 
-                    renderer_state.current_view = "animation_part".to_string();
+                    renderer_state.current_view = destination_view.clone();
 
                     part_selected_signal.set(true);
                     selected_part_id_signal.set(part_id.clone());

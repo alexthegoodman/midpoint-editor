@@ -1,8 +1,11 @@
 use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
+use midpoint_engine::floem::common::toggle_button;
 use midpoint_engine::floem::reactive::create_effect;
 use midpoint_engine::floem::reactive::create_rw_signal;
 use midpoint_engine::floem::reactive::SignalGet;
+use midpoint_engine::floem::reactive::SignalUpdate;
+use midpoint_engine::floem::views::h_stack;
 use midpoint_engine::floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
@@ -29,14 +32,11 @@ pub fn project_view(
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: std::sync::Arc<Mutex<Viewport>>,
 ) -> impl IntoView {
-    // object_selected? model_selected?
     let object_selected_signal = create_rw_signal(false);
     let selected_object_id_signal = create_rw_signal(Uuid::nil());
-    // let selected_object_data_signal = create_rw_signal(ObjectConfig {
-    //     id: Uuid::nil(),
-    //     name: "".to_string(),
-    //     position: (0.0, 0.0, 0.0),
-    // });
+    let active_gizmo_signal = create_rw_signal("translation".to_string());
+    let current_view_signal = create_rw_signal("scene".to_string());
+
     let selected_object_data_signal = create_rw_signal(ComponentData {
         id: "".to_string(),
         kind: Some(ComponentKind::Model),
@@ -52,6 +52,9 @@ pub fn project_view(
     });
 
     let state_2 = Arc::clone(&state_helper);
+    let state_3 = Arc::clone(&state_helper);
+    let state_4 = Arc::clone(&state_helper);
+    let state_5 = Arc::clone(&state_helper);
 
     create_effect(move |_| {
         let state_helper = state_2.clone();
@@ -59,6 +62,9 @@ pub fn project_view(
         state_helper.object_selected_signal = Some(object_selected_signal);
         state_helper.selected_object_id_signal = Some(selected_object_id_signal);
         state_helper.selected_object_data_signal = Some(selected_object_data_signal);
+
+        // also current_view
+        state_helper.current_view_signal = Some(current_view_signal);
     });
 
     container((
@@ -81,6 +87,87 @@ pub fn project_view(
                         selected_object_id_signal,
                         selected_object_data_signal,
                     )
+                    .into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
+        dyn_container(
+            move || current_view_signal.get(),
+            move |current_view_real| {
+                if current_view_real == "scene".to_string() {
+                    h_stack((
+                        toggle_button(
+                            "Translate",
+                            "translate",
+                            "translate".to_string(),
+                            {
+                                let state_3 = state_3.clone();
+
+                                move |_| {
+                                    let mut state_helper = state_3.lock().unwrap();
+                                    let mut renderer_state = state_helper
+                                        .renderer_state
+                                        .as_mut()
+                                        .expect("Couldn't get RendererState")
+                                        .lock()
+                                        .unwrap();
+
+                                    renderer_state.active_gizmo = "translate".to_string();
+
+                                    active_gizmo_signal.set("translate".to_string());
+                                }
+                            },
+                            active_gizmo_signal,
+                        ),
+                        toggle_button(
+                            "Rotate",
+                            "rotate",
+                            "rotate".to_string(),
+                            {
+                                let state_4 = state_4.clone();
+
+                                move |_| {
+                                    let mut state_helper = state_4.lock().unwrap();
+                                    let mut renderer_state = state_helper
+                                        .renderer_state
+                                        .as_mut()
+                                        .expect("Couldn't get RendererState")
+                                        .lock()
+                                        .unwrap();
+
+                                    renderer_state.active_gizmo = "rotate".to_string();
+
+                                    active_gizmo_signal.set("rotate".to_string());
+                                }
+                            },
+                            active_gizmo_signal,
+                        ),
+                        toggle_button(
+                            "Scale",
+                            "scale",
+                            "scale".to_string(),
+                            {
+                                let state_5 = state_5.clone();
+
+                                move |_| {
+                                    let mut state_helper = state_5.lock().unwrap();
+                                    let mut renderer_state = state_helper
+                                        .renderer_state
+                                        .as_mut()
+                                        .expect("Couldn't get RendererState")
+                                        .lock()
+                                        .unwrap();
+
+                                    renderer_state.active_gizmo = "scale".to_string();
+
+                                    active_gizmo_signal.set("scale".to_string());
+                                }
+                            },
+                            active_gizmo_signal,
+                        ),
+                    ))
                     .into_any()
                 } else {
                     empty().into_any()

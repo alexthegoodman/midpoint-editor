@@ -1,15 +1,17 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use midpoint_engine::core::Viewport::Viewport;
-use midpoint_engine::floem::common::{card_styles, tab_button};
+use midpoint_engine::floem::common::{
+    card_styles, small_button, success_button, tab_button, toggle_button,
+};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
 use midpoint_engine::floem::keyboard::{Key, NamedKey};
 use midpoint_engine::floem::peniko::Color;
-use midpoint_engine::floem::reactive::create_signal;
+use midpoint_engine::floem::reactive::{create_rw_signal, create_signal};
 use midpoint_engine::floem::views::dropdown::dropdown;
 use midpoint_engine::floem::views::scroll::ScrollCustomStyle;
 use midpoint_engine::floem::views::{
-    container, dyn_container, dyn_stack, empty, label, scroll, stack, tab, text, v_stack,
+    container, dyn_container, dyn_stack, empty, h_stack, label, scroll, stack, tab, text, v_stack,
     virtual_stack, VirtualDirection,
 };
 use wgpu::util::DeviceExt;
@@ -35,13 +37,15 @@ pub fn scene_view(
     viewport: Arc<Mutex<Viewport>>,
 ) -> impl View {
     let state_2 = Arc::clone(&state_helper);
+    let state_3 = Arc::clone(&state_helper);
+    let state_4 = Arc::clone(&state_helper);
+    let state_5 = Arc::clone(&state_helper);
 
     let tabs: im::Vector<&str> = vec!["Levels", "Components", "Models", "Landscapes", "Textures"]
         .into_iter()
         .collect();
     let (tabs, _set_tabs) = create_signal(tabs);
     let (active_tab, set_active_tab) = create_signal(0);
-    // let (selected_option, set_selected_option) = create_signal(DropdownOption2::Option1);
 
     let list = scroll({
         dyn_stack(

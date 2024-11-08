@@ -124,6 +124,12 @@ pub fn project_tab_interface(
                                 });
 
                                 let mut state_helper = state_helper.lock().unwrap();
+
+                                let current_view_signal = state_helper
+                                    .current_view_signal
+                                    .expect("Couldn't get current view signal");
+                                current_view_signal.set(destination_view.to_string());
+
                                 let mut renderer_state = state_helper
                                     .renderer_state
                                     .as_mut()
@@ -298,6 +304,9 @@ pub fn welcome_tab_interface(
                                 });
 
                                 let mut state_helper = state_helper.lock().unwrap();
+
+                                // no need to set current_view_signal, alhtough it could live in app_view if needed
+
                                 let mut renderer_state = state_helper
                                     .renderer_state
                                     .as_mut()

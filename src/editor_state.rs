@@ -182,6 +182,7 @@ pub struct StateHelper {
     pub object_selected_signal: Option<RwSignal<bool>>,
     pub selected_object_id_signal: Option<RwSignal<Uuid>>,
     pub selected_object_data_signal: Option<RwSignal<ComponentData>>,
+    pub current_view_signal: Option<RwSignal<String>>,
 }
 
 #[derive(Clone, Debug)]
@@ -210,6 +211,7 @@ impl StateHelper {
             object_selected_signal: None,
             selected_object_id_signal: None,
             selected_object_data_signal: None,
+            current_view_signal: None,
         }
     }
 

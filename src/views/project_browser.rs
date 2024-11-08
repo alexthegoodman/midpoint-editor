@@ -131,6 +131,13 @@ pub fn project_browser(
 
                             let mut state_helper = state_helper.lock().unwrap();
 
+                            let destination_view = "scene".to_string();
+                            // no need to set here, the default is scene
+                            // let current_view_signal = state_helper
+                            //     .current_view_signal
+                            //     .expect("Couldn't get current view signal");
+                            // current_view_signal.set(destination_view.clone());
+
                             // retrieve saved state of project and set on helper
                             let saved_state = load_project_state(&project.name)
                                 .expect("Couldn't get project saved state");
@@ -153,7 +160,7 @@ pub fn project_browser(
                                 .lock()
                                 .unwrap();
                             renderer_state.project_selected = Some(uuid.clone());
-                            renderer_state.current_view = "scene".to_string();
+                            renderer_state.current_view = destination_view.clone();
 
                             drop(renderer_state);
 

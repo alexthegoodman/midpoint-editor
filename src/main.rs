@@ -135,21 +135,24 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // Render partial screen content
                     // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
+                    let aside_width = 500;
+                    let timeline_height = 500;
+                    let toolbar_height = 50;
                     if (engine.current_view == "animation_skeleton".to_string()) {
                         // height minus timeline, width minus sidebar
                         render_pass.set_scissor_rect(
-                            500,
+                            aside_width,
                             0,
-                            window_size.width - 500,
-                            window_size.height - 500,
+                            window_size.width - aside_width,
+                            window_size.height - timeline_height,
                         );
                     } else {
-                        // full height, width minus sidebar
+                        // height minus toolbar, width minus sidebar
                         render_pass.set_scissor_rect(
-                            500,
-                            0,
-                            window_size.width - 500,
-                            window_size.height,
+                            aside_width,
+                            toolbar_height,
+                            window_size.width - aside_width,
+                            window_size.height - toolbar_height,
                         );
                     }
 
@@ -184,8 +187,12 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         let (vertex_buffer, index_buffer, index_count) =
                             create_ray_debug_mesh(&last_ray, 1000.0, 0.0002, &gpu_resources.device);
                         render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                        render_pass.set_bind_group(1, &engine.gizmo.bind_group, &[]);
-                        render_pass.set_bind_group(2, &engine.gizmo.texture_bind_group, &[]);
+                        render_pass.set_bind_group(1, &engine.translation_gizmo.bind_group, &[]);
+                        render_pass.set_bind_group(
+                            2,
+                            &engine.translation_gizmo.texture_bind_group,
+                            &[],
+                        );
 
                         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
                         render_pass
@@ -196,22 +203,74 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // draw gizmo
                     if engine.object_selected.is_some() {
-                        engine
-                            .gizmo
-                            .transform
-                            .update_uniform_buffer(&gpu_resources.queue);
-                        render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                        render_pass.set_bind_group(1, &engine.gizmo.bind_group, &[]);
-                        render_pass.set_bind_group(2, &engine.gizmo.texture_bind_group, &[]);
-
-                        engine.gizmo.arrows.iter().for_each(|arrow| {
-                            render_pass.set_vertex_buffer(0, arrow.vertex_buffer.slice(..));
-                            render_pass.set_index_buffer(
-                                arrow.index_buffer.slice(..),
-                                wgpu::IndexFormat::Uint32,
+                        if engine.active_gizmo == "translate".to_string() {
+                            engine
+                                .translation_gizmo
+                                .transform
+                                .update_uniform_buffer(&gpu_resources.queue);
+                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                            render_pass.set_bind_group(
+                                1,
+                                &engine.translation_gizmo.bind_group,
+                                &[],
                             );
-                            render_pass.draw_indexed(0..arrow.index_count, 0, 0..1);
-                        });
+                            render_pass.set_bind_group(
+                                2,
+                                &engine.translation_gizmo.texture_bind_group,
+                                &[],
+                            );
+
+                            engine.translation_gizmo.arrows.iter().for_each(|arrow| {
+                                render_pass.set_vertex_buffer(0, arrow.vertex_buffer.slice(..));
+                                render_pass.set_index_buffer(
+                                    arrow.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint32,
+                                );
+                                render_pass.draw_indexed(0..arrow.index_count, 0, 0..1);
+                            });
+                        } else if engine.active_gizmo == "rotate".to_string() {
+                            engine
+                                .rotation_gizmo
+                                .transform
+                                .update_uniform_buffer(&gpu_resources.queue);
+                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                            render_pass.set_bind_group(1, &engine.rotation_gizmo.bind_group, &[]);
+                            render_pass.set_bind_group(
+                                2,
+                                &engine.rotation_gizmo.texture_bind_group,
+                                &[],
+                            );
+
+                            engine.rotation_gizmo.rings.iter().for_each(|ring| {
+                                render_pass.set_vertex_buffer(0, ring.vertex_buffer.slice(..));
+                                render_pass.set_index_buffer(
+                                    ring.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint32,
+                                );
+                                render_pass.draw_indexed(0..ring.index_count, 0, 0..1);
+                            });
+                        } else if engine.active_gizmo == "scale".to_string() {
+                            engine
+                                .scale_gizmo
+                                .transform
+                                .update_uniform_buffer(&gpu_resources.queue);
+                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                            render_pass.set_bind_group(1, &engine.scale_gizmo.bind_group, &[]);
+                            render_pass.set_bind_group(
+                                2,
+                                &engine.scale_gizmo.texture_bind_group,
+                                &[],
+                            );
+
+                            engine.scale_gizmo.handles.iter().for_each(|handle| {
+                                render_pass.set_vertex_buffer(0, handle.vertex_buffer.slice(..));
+                                render_pass.set_index_buffer(
+                                    handle.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint32,
+                                );
+                                render_pass.draw_indexed(0..handle.index_count, 0, 0..1);
+                            });
+                        }
                     }
 
                     // draw utility grids
@@ -392,7 +451,7 @@ fn handle_cursor_moved(
             }
             if (renderer_state.mouse_state.drag_started || renderer_state.mouse_state.is_dragging) {
                 if renderer_state.object_selected.is_some() && renderer_state.ray_intersecting {
-                    let ray_arrow = renderer_state.gizmo.arrows.iter().find(|a| {
+                    let ray_arrow = renderer_state.translation_gizmo.arrows.iter().find(|a| {
                         a.id == renderer_state
                             .ray_component_id
                             .expect("Couldn't get ray component id")
@@ -401,12 +460,41 @@ fn handle_cursor_moved(
                     if ray_arrow.is_some() {
                         renderer_state.gizmo_drag_axis =
                             Some(ray_arrow.expect("Couldn't get ray arrow").axis);
-                        renderer_state.dragging_gizmo = true;
+                        renderer_state.dragging_translation_gizmo = true;
+                    }
+
+                    let state_helper = state_helper.lock().unwrap();
+                    let saved_state = state_helper
+                        .saved_state
+                        .as_ref()
+                        .expect("Couldn't get saved state");
+                    let saved_state = saved_state.lock().unwrap();
+
+                    let ray_component = saved_state
+                        .levels
+                        .as_ref()
+                        .expect("Couldn't get levels")
+                        .get(0)
+                        .expect("Couldn't get first level")
+                        .components
+                        .as_ref()
+                        .expect("Couldn't get components")
+                        .iter()
+                        .find(|c| {
+                            c.id == renderer_state
+                                .ray_component_id
+                                .expect("Couldn't get ray component")
+                                .to_string()
+                        });
+
+                    if ray_component.is_some() {
+                        // println!("Component interaction...");
+                        // TODO: select component
                     }
                 }
-                if renderer_state.object_selected.is_some() && renderer_state.dragging_gizmo {
-                    // println!("Dragging while component selected!");
-
+                if renderer_state.object_selected.is_some()
+                    && renderer_state.dragging_translation_gizmo
+                {
                     let dx = dx * 0.005;
                     let dy = dy * 0.005;
 
@@ -437,26 +525,8 @@ fn handle_cursor_moved(
 
                     let mouse_state = renderer_state.mouse_state.clone();
 
-                    let ray_component = saved_state
-                        .levels
-                        .as_ref()
-                        .expect("Couldn't get levels")
-                        .get(0)
-                        .expect("Couldn't get first level")
-                        .components
-                        .as_ref()
-                        .expect("Couldn't get components")
-                        .iter()
-                        .find(|c| {
-                            c.id == renderer_state
-                                .ray_component_id
-                                .expect("Couldn't get ray component")
-                                .to_string()
-                        });
-
                     // if we are pointing at a gizmo arrow
-                    if renderer_state.dragging_gizmo {
-                        // let ray_arrow = ray_arrow.expect("Couldn't get ray arrow");
+                    if renderer_state.dragging_translation_gizmo {
                         let ray_arrow_axis = renderer_state
                             .gizmo_drag_axis
                             .expect("Couldn't get gizmo axis");
@@ -535,7 +605,7 @@ fn handle_cursor_moved(
 
                             // update gizmo transform position
                             renderer_state
-                                .gizmo
+                                .translation_gizmo
                                 .transform
                                 .update_position(savable_transform[0]);
 
@@ -561,11 +631,6 @@ fn handle_cursor_moved(
                                         .iter_mut()
                                         .find(|m| m.id == selected_component.id)
                                         .expect("Couldn't find matching model");
-
-                                    // println!(
-                                    //     "Update transforms! {:?} {:?}",
-                                    //     current_transform[0], savable_transform[0]
-                                    // );
 
                                     // update visually
                                     matching_model.meshes.iter_mut().for_each(move |mesh| {
@@ -603,11 +668,6 @@ fn handle_cursor_moved(
                             }
                         }
                     }
-
-                    if ray_component.is_some() {
-                        // println!("Component intersection...");
-                        // TODO: select component
-                    }
                 }
             }
         },
@@ -642,7 +702,7 @@ fn handle_mouse_input(
                 }
                 ElementState::Released => {
                     renderer_state.mouse_state.is_dragging = false;
-                    renderer_state.dragging_gizmo = false;
+                    renderer_state.dragging_translation_gizmo = false;
                 }
             };
         }
