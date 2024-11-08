@@ -8,6 +8,7 @@ use midpoint_engine::floem::reactive::create_rw_signal;
 use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::SignalUpdate;
 use midpoint_engine::floem::style::Foreground;
+use midpoint_engine::floem::taffy::AlignItems;
 use midpoint_engine::floem::views::h_stack;
 use midpoint_engine::floem::views::slider::slider;
 use midpoint_engine::floem::views::slider::AccentBarClass;
@@ -146,7 +147,8 @@ pub fn project_view(
                                 }
                             },
                             active_gizmo_signal,
-                        ),
+                        )
+                        .style(|s| s.margin_right(4.0)),
                         toggle_button(
                             "Rotate",
                             "rotate",
@@ -169,7 +171,8 @@ pub fn project_view(
                                 }
                             },
                             active_gizmo_signal,
-                        ),
+                        )
+                        .style(|s| s.margin_right(4.0)),
                         toggle_button(
                             "Scale",
                             "scale",
@@ -193,25 +196,26 @@ pub fn project_view(
                             },
                             active_gizmo_signal,
                         ),
-                        label(move || {
-                            format!("Navigation Speed: {:.0}%", navigation_speed_signal.get())
-                        }),
+                        label(move || format!("Nav Speed: {:.1}x", navigation_speed_signal.get()))
+                            .style(|s| s.margin_left(10.0)),
                         slider(|| 5.0)
-                            .style(|s| s.margin_left(10).width(200).height(20))
+                            .style(|s| s.margin_left(6.0).width(200).height(15))
                             .on_change_pct(move |value| {
                                 // println!("Speed changed to: {}%", value);
                                 // Here you would implement your 3D navigation speed adjustment logic
-                                navigation_speed_signal.set(value);
+                                if value - 4.0 < 1.0 {
+                                    navigation_speed_signal.set(((1.0 / value) - 1.0).abs());
+                                } else {
+                                    navigation_speed_signal.set(value - 4.0);
+                                }
                             })
                             .style(|s| {
                                 s.class(SliderClass, |s| {
                                     s.set(Foreground, Brush::Solid(Color::WHITE))
                                         .set(EdgeAlign, true)
-                                        .set(HandleRadius, 25.0)
+                                        .set(HandleRadius, 15.0)
                                 })
-                                .class(BarClass, |s| {
-                                    s.background(Color::BLACK).border_radius(100.0)
-                                })
+                                .class(BarClass, |s| s.background(Color::GRAY).border_radius(100.0))
                                 .class(AccentBarClass, |s| {
                                     s.background(Color::ROYAL_BLUE)
                                         .border_radius(100.0)
@@ -219,6 +223,7 @@ pub fn project_view(
                                 })
                             }),
                     ))
+                    .style(|s| s.height(40.0).align_items(AlignItems::Center))
                     .into_any()
                 } else {
                     empty().into_any()

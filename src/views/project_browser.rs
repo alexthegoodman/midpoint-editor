@@ -105,7 +105,7 @@ pub fn project_browser(
         alert(
             midpoint_engine::floem::common::AlertVariant::Info,
             "Make sure CommonOS Files is running and you are signed in to assure you can generate concepts, models, and animations.".to_string(),
-        ),
+        ).style(|s| s.margin_bottom(10.0)),
         (label(|| "Select a Project").style(|s| s.margin_bottom(4.0))),
         scroll(
             dyn_stack(
