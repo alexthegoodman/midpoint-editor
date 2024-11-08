@@ -2451,6 +2451,7 @@ dependencies = [
  "rand",
  "rapier3d",
  "raw-window-handle 0.6.2",
+ "rayon",
  "regex",
  "reqwest 0.12.8",
  "reqwest-graphql",

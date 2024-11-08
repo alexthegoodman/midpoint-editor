@@ -1,11 +1,21 @@
 use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::toggle_button;
+use midpoint_engine::floem::peniko::Brush;
+use midpoint_engine::floem::peniko::Color;
 use midpoint_engine::floem::reactive::create_effect;
 use midpoint_engine::floem::reactive::create_rw_signal;
 use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::SignalUpdate;
+use midpoint_engine::floem::style::Foreground;
 use midpoint_engine::floem::views::h_stack;
+use midpoint_engine::floem::views::slider::slider;
+use midpoint_engine::floem::views::slider::AccentBarClass;
+use midpoint_engine::floem::views::slider::BarClass;
+use midpoint_engine::floem::views::slider::EdgeAlign;
+use midpoint_engine::floem::views::slider::HandleRadius;
+use midpoint_engine::floem::views::slider::SliderClass;
+use midpoint_engine::floem::views::Decorators;
 use midpoint_engine::floem::views::{
     container, dyn_container, empty, label, scroll, stack, tab, text_input, virtual_stack,
     VirtualDirection, VirtualItemSize,
@@ -36,6 +46,7 @@ pub fn project_view(
     let selected_object_id_signal = create_rw_signal(Uuid::nil());
     let active_gizmo_signal = create_rw_signal("translation".to_string());
     let current_view_signal = create_rw_signal("scene".to_string());
+    let navigation_speed_signal = create_rw_signal(5.0);
 
     let selected_object_data_signal = create_rw_signal(ComponentData {
         id: "".to_string(),
@@ -55,6 +66,7 @@ pub fn project_view(
     let state_3 = Arc::clone(&state_helper);
     let state_4 = Arc::clone(&state_helper);
     let state_5 = Arc::clone(&state_helper);
+    let state_6 = Arc::clone(&state_helper);
 
     create_effect(move |_| {
         let state_helper = state_2.clone();
@@ -65,6 +77,20 @@ pub fn project_view(
 
         // also current_view
         state_helper.current_view_signal = Some(current_view_signal);
+    });
+
+    // retain navigation speed
+    create_effect(move |_| {
+        let state_helper = state_6.clone();
+        let mut state_helper = state_helper.lock().unwrap();
+        let mut renderer_state = state_helper
+            .renderer_state
+            .as_mut()
+            .expect("Couldn't get RendererState")
+            .lock()
+            .unwrap();
+        let new_navigation_speed = navigation_speed_signal.get();
+        renderer_state.navigation_speed = new_navigation_speed;
     });
 
     container((
@@ -167,6 +193,31 @@ pub fn project_view(
                             },
                             active_gizmo_signal,
                         ),
+                        label(move || {
+                            format!("Navigation Speed: {:.0}%", navigation_speed_signal.get())
+                        }),
+                        slider(|| 5.0)
+                            .style(|s| s.margin_left(10).width(200).height(20))
+                            .on_change_pct(move |value| {
+                                // println!("Speed changed to: {}%", value);
+                                // Here you would implement your 3D navigation speed adjustment logic
+                                navigation_speed_signal.set(value);
+                            })
+                            .style(|s| {
+                                s.class(SliderClass, |s| {
+                                    s.set(Foreground, Brush::Solid(Color::WHITE))
+                                        .set(EdgeAlign, true)
+                                        .set(HandleRadius, 25.0)
+                                })
+                                .class(BarClass, |s| {
+                                    s.background(Color::BLACK).border_radius(100.0)
+                                })
+                                .class(AccentBarClass, |s| {
+                                    s.background(Color::ROYAL_BLUE)
+                                        .border_radius(100.0)
+                                        .height(100.0)
+                                })
+                            }),
                     ))
                     .into_any()
                 } else {
