@@ -24,23 +24,24 @@ pub fn maps_view(
 ) -> impl View {
     let topo_heights: RwSignal<Option<nalgebra::DMatrix<f32>>> = create_rw_signal(None);
 
-    create_effect(move |_| {
-        let state_helper = state_helper.lock().unwrap();
-        let renderer_state = state_helper
-            .renderer_state
-            .as_ref()
-            .expect("Couldn't get saved state")
-            .lock()
-            .unwrap();
+    // TODO: reimplement now with upscaling (use original?)
+    // create_effect(move |_| {
+    //     let state_helper = state_helper.lock().unwrap();
+    //     let renderer_state = state_helper
+    //         .renderer_state
+    //         .as_ref()
+    //         .expect("Couldn't get saved state")
+    //         .lock()
+    //         .unwrap();
 
-        let landscape = renderer_state
-            .landscapes
-            .get(0)
-            .expect("Couldn't get first landscape");
+    //     let landscape = renderer_state
+    //         .landscapes
+    //         .get(0)
+    //         .expect("Couldn't get first landscape");
 
-        // all new projects should have 1 level created upon creation
-        topo_heights.set(Some(landscape.heights.clone()));
-    });
+    //     // all new projects should have 1 level created upon creation
+    //     topo_heights.set(Some(landscape.heights.clone()));
+    // });
 
     h_stack((
         v_stack(((label(|| "Maps"),)))

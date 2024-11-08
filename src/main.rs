@@ -363,29 +363,42 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             }
                         }
 
-                        for landscape in &engine.landscapes {
-                            if (landscape.texture_bind_group.is_some()) {
-                                landscape
-                                    .transform
-                                    .update_uniform_buffer(&gpu_resources.queue);
-                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                                render_pass.set_bind_group(1, &landscape.bind_group, &[]);
-                                render_pass.set_bind_group(
-                                    2,
-                                    &landscape
-                                        .texture_bind_group
-                                        .as_ref()
-                                        .expect("No landscape texture bind group"),
-                                    &[],
-                                );
+                        for landscape_manager in &engine.landscape_managers {
+                            for tile_info in &landscape_manager.tiles {
+                                let landscape = &tile_info.1.landscape;
 
-                                render_pass.set_vertex_buffer(0, landscape.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    landscape.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint32,
-                                );
+                                if (landscape.texture_bind_group.is_some()) {
+                                    landscape_manager
+                                        .transform
+                                        .update_uniform_buffer(&gpu_resources.queue);
+                                    render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                                    render_pass.set_bind_group(
+                                        1,
+                                        &landscape_manager.bind_group,
+                                        &[],
+                                    );
+                                    render_pass.set_bind_group(
+                                        2,
+                                        &landscape
+                                            .texture_bind_group
+                                            .as_ref()
+                                            .expect("No landscape texture bind group"),
+                                        &[],
+                                    );
 
-                                render_pass.draw_indexed(0..landscape.index_count as u32, 0, 0..1);
+                                    render_pass
+                                        .set_vertex_buffer(0, landscape.vertex_buffer.slice(..));
+                                    render_pass.set_index_buffer(
+                                        landscape.index_buffer.slice(..),
+                                        wgpu::IndexFormat::Uint32,
+                                    );
+
+                                    render_pass.draw_indexed(
+                                        0..landscape.index_count as u32,
+                                        0,
+                                        0..1,
+                                    );
+                                }
                             }
                         }
                     }
@@ -548,15 +561,15 @@ fn handle_cursor_moved(
                                 ]
                             }
                             ComponentKind::Landscape => {
-                                let landscape = renderer_state
-                                    .landscapes
+                                let landscape_manager = renderer_state
+                                    .landscape_managers
                                     .iter()
                                     .find(|m| m.id == selected_component.id)
                                     .expect("Couldn't find matching landscape");
                                 [
-                                    landscape.transform.position,
-                                    landscape.transform.rotation,
-                                    landscape.transform.scale,
+                                    landscape_manager.transform.position,
+                                    landscape_manager.transform.rotation,
+                                    landscape_manager.transform.scale,
                                 ]
                             }
                         };
@@ -644,20 +657,20 @@ fn handle_cursor_moved(
                                         .update_model_collider_position(savable_transform[0]);
                                 }
                                 ComponentKind::Landscape => {
-                                    let mut matching_landscape = renderer_state
-                                        .landscapes
+                                    let mut landscape_manager = renderer_state
+                                        .landscape_managers
                                         .iter_mut()
                                         .find(|m| m.id == selected_component.id)
                                         .expect("Couldn't find matching landscape");
 
                                     // visual
-                                    matching_landscape
+                                    landscape_manager
                                         .transform
                                         .update_position(savable_transform[0]);
-                                    matching_landscape
+                                    landscape_manager
                                         .transform
                                         .update_rotation(savable_transform[1]);
-                                    matching_landscape
+                                    landscape_manager
                                         .transform
                                         .update_scale(savable_transform[2]);
 
@@ -876,6 +889,9 @@ fn handle_keyboard_input(
 
         handle_key_press(
             Arc::clone(&editor_state.renderer_state),
+            &gpu_resources.device,
+            &gpu_resources.queue,
+            None, // TODO: resupport unscaled landscapes
             logical_key_text,
             true,
         );
