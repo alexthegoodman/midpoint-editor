@@ -208,7 +208,7 @@ pub fn landscape_item(
         )
         .disabled(move || disabled.get()),
         small_button(
-            "Upscale by 10x",
+            "Upscale 16x (4x4)",
             "plus",
             {
                 let landscape_id = landscape_id.clone();
@@ -249,8 +249,16 @@ pub fn landscape_item(
                         sync_dir.join(format!("{}/{}", heightmap_filepath, heightmap_filename));
                     let heightmap_full_path = heightmap_full_path.as_path();
 
-                    upscale_tiff_heightmap(heightmap_full_path, upscaled_dir, 16, 16, 0.0)
-                        .expect("Couldn't upscale landscape");
+                    upscale_tiff_heightmap(
+                        project_id.to_string(),
+                        landscape_id.clone(),
+                        heightmap_full_path,
+                        upscaled_dir,
+                        4, // trying 4 which is actually 16x, want 8 which is 64x
+                        4,
+                        0.0,
+                    )
+                    .expect("Couldn't upscale landscape");
                 }
             },
             upscale_active,

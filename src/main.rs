@@ -127,6 +127,9 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // println!("Render frame...");
 
+                    // updates landscape lods every 10 seconds
+                    engine.update_landscape_lods(&gpu_resources.queue);
+
                     let viewport = engine.viewport.lock().unwrap();
                     let window_size = WindowSize {
                         width: viewport.width as u32,
