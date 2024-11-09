@@ -127,6 +127,9 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
 
                     // println!("Render frame...");
 
+                    // update terrain managers manually without step function
+                    engine.update_terrain_managers(&gpu_resources.device, 0.1);
+
                     let viewport = engine.viewport.lock().unwrap();
                     let window_size = WindowSize {
                         width: viewport.width as u32,
@@ -363,30 +366,13 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             }
                         }
 
-                        for landscape in &engine.landscapes {
-                            if (landscape.texture_bind_group.is_some()) {
-                                landscape
-                                    .transform
-                                    .update_uniform_buffer(&gpu_resources.queue);
-                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                                render_pass.set_bind_group(1, &landscape.bind_group, &[]);
-                                render_pass.set_bind_group(
-                                    2,
-                                    &landscape
-                                        .texture_bind_group
-                                        .as_ref()
-                                        .expect("No landscape texture bind group"),
-                                    &[],
-                                );
-
-                                render_pass.set_vertex_buffer(0, landscape.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    landscape.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint32,
-                                );
-
-                                render_pass.draw_indexed(0..landscape.index_count as u32, 0, 0..1);
-                            }
+                        // Render all terrain managers
+                        for terrain_manager in &engine.terrain_managers {
+                            terrain_manager.render(
+                                &mut render_pass,
+                                &engine.camera_bind_group,
+                                &gpu_resources.queue,
+                            );
                         }
                     }
                 }
@@ -548,15 +534,15 @@ fn handle_cursor_moved(
                                 ]
                             }
                             ComponentKind::Landscape => {
-                                let landscape = renderer_state
-                                    .landscapes
+                                let terrain_manager = renderer_state
+                                    .terrain_managers
                                     .iter()
                                     .find(|m| m.id == selected_component.id)
                                     .expect("Couldn't find matching landscape");
                                 [
-                                    landscape.transform.position,
-                                    landscape.transform.rotation,
-                                    landscape.transform.scale,
+                                    terrain_manager.transform.position,
+                                    terrain_manager.transform.rotation,
+                                    terrain_manager.transform.scale,
                                 ]
                             }
                         };
@@ -644,20 +630,20 @@ fn handle_cursor_moved(
                                         .update_model_collider_position(savable_transform[0]);
                                 }
                                 ComponentKind::Landscape => {
-                                    let mut matching_landscape = renderer_state
-                                        .landscapes
+                                    let mut matching_terrain_manager = renderer_state
+                                        .terrain_managers
                                         .iter_mut()
                                         .find(|m| m.id == selected_component.id)
                                         .expect("Couldn't find matching landscape");
 
                                     // visual
-                                    matching_landscape
+                                    matching_terrain_manager
                                         .transform
                                         .update_position(savable_transform[0]);
-                                    matching_landscape
+                                    matching_terrain_manager
                                         .transform
                                         .update_rotation(savable_transform[1]);
-                                    matching_landscape
+                                    matching_terrain_manager
                                         .transform
                                         .update_scale(savable_transform[2]);
 

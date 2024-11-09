@@ -118,14 +118,16 @@ pub fn update_position(
             renderer_state.update_model_collider_position(new_position);
         }
         ComponentKind::Landscape => {
-            let mut matching_landscape = renderer_state
-                .landscapes
+            let mut matching_terrain_manager = renderer_state
+                .terrain_managers
                 .iter_mut()
                 .find(|m| m.id == selected_component.id)
                 .expect("Couldn't find matching landscape");
 
             // visual
-            matching_landscape.transform.update_position(new_position);
+            matching_terrain_manager
+                .transform
+                .update_position(new_position);
 
             // physics
             renderer_state.update_landscape_collider_position(new_position);
