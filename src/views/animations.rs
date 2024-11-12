@@ -1,20 +1,22 @@
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::Duration;
 
 use super::keyframe_timeline::{
-    create_test_timeline, AnimationData, TimelineConfig, TimelineGridView, TimelineState,
+    create_timeline, AnimationData, TimelineConfig, TimelineGridView, TimelineState,
 };
 use super::part_browser::part_browser;
 use super::part_properties::{self, part_properties};
 use super::shared::dynamic_img;
 use super::skeleton_browser::skeleton_browser;
 use super::skeleton_properties::skeleton_properties;
+use midpoint_engine::animations::motion_path::SkeletonMotionPath;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{card_styles, small_button, tab_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
 use midpoint_engine::floem::keyboard::{Key, NamedKey};
 use midpoint_engine::floem::peniko::Color;
-use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::SignalUpdate;
+use midpoint_engine::floem::reactive::{create_effect, SignalGet};
 use midpoint_engine::floem::reactive::{create_rw_signal, create_signal};
 use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, h_stack, label, scroll, stack, tab, v_stack,
@@ -36,6 +38,7 @@ pub fn animations_view(
     let state_3 = Arc::clone(&state_helper);
     let state_4 = Arc::clone(&state_helper);
     let state_5 = Arc::clone(&state_helper);
+    let state_6 = Arc::clone(&state_helper);
 
     let gpu_2 = Arc::clone(&gpu_helper);
     let gpu_3 = Arc::clone(&gpu_helper);
@@ -55,7 +58,36 @@ pub fn animations_view(
     let active_1 = create_rw_signal(false);
     let active_2 = create_rw_signal(false);
 
+    let motion_paths = create_rw_signal(Vec::new());
+    let animation_data: midpoint_engine::floem::reactive::RwSignal<Option<AnimationData>> =
+        create_rw_signal(None);
+
+    create_effect(move |_| {
+        println!("start effect");
+        let state_helper = state_6.lock().unwrap();
+        let saved_state = state_helper
+            .saved_state
+            .as_ref()
+            .expect("Couldn't get SavedState");
+        let saved_state = saved_state.lock().unwrap();
+
+        let relevant_paths: Vec<SkeletonMotionPath> = saved_state
+            .motion_paths
+            .iter()
+            .filter(|mp| mp.target.skeleton_id == selected_skeleton_id_signal.get())
+            .map(|mp| mp.clone())
+            .collect();
+
+        let animations = AnimationData::from_motion_paths(relevant_paths.clone());
+
+        motion_paths.set(relevant_paths);
+        animation_data.set(Some(animations));
+
+        println!("finish effect");
+    });
+
     h_stack((
+        /* Object Browsers */
         dyn_container(
             move || !part_selected_signal.get() && !skeleton_selected_signal.get(),
             move |either_selected_real| {
@@ -174,6 +206,7 @@ pub fn animations_view(
                 }
             },
         ),
+        /* Part Properties */
         dyn_container(
             move || part_selected_signal.get(),
             move |part_selected_real| {
@@ -191,14 +224,50 @@ pub fn animations_view(
                 }
             },
         ),
+        /* Skeleton Properties + Editor (sidebar + timeline) */
         dyn_container(
-            move || skeleton_selected_signal.get(),
+            move || skeleton_selected_signal.get() && animation_data.get().is_some(),
             move |skeleton_selected_real| {
                 if skeleton_selected_real {
-                    let keyframe_timeline = create_test_timeline();
+                    let state = TimelineState {
+                        current_time: Duration::from_secs_f64(0.0),
+                        zoom_level: 1.0,
+                        scroll_offset: 0.0,
+                        selected_keyframes: Vec::new(),
+                        property_expansions: im::HashMap::from_iter([
+                            ("position".to_string(), true),
+                            ("rotation".to_string(), true),
+                        ]),
+                        dragging: None,
+                        hovered_keyframe: None,
+                    };
+
+                    let config = TimelineConfig {
+                        width: 1200.0,
+                        height: 300.0,
+                        header_height: 30.0,
+                        property_width: 200.0,
+                        row_height: 24.0,
+                        // offset_x: 325.0,
+                        // offset_y: 300.0,
+                        offset_x: 0.0,
+                        offset_y: 0.0,
+                    };
+
+                    let keyframe_timeline = create_timeline(
+                        state,
+                        config,
+                        animation_data.get().expect("Animation data not loaded"),
+                    );
 
                     h_stack((
-                        skeleton_properties(state_4.clone(), gpu_3.clone(), viewport_3.clone()),
+                        skeleton_properties(
+                            state_4.clone(),
+                            gpu_3.clone(),
+                            viewport_3.clone(),
+                            selected_skeleton_id_signal.get(),
+                            motion_paths,
+                        ),
                         v_stack((
                             h_stack((
                                 small_button("Play", "plus", |_| {}, active_1),

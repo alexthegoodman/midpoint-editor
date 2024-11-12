@@ -55,11 +55,6 @@ pub fn skeleton_item(
 
                     let destination_view = "animation_skeleton".to_string();
 
-                    let current_view_signal = state_helper_guard
-                        .current_view_signal
-                        .expect("Couldn't get current view signal");
-                    current_view_signal.set(destination_view.clone());
-
                     let mut renderer_state = state_helper_guard
                         .renderer_state
                         .as_mut()
@@ -68,9 +63,6 @@ pub fn skeleton_item(
                         .unwrap();
 
                     renderer_state.current_view = destination_view.clone();
-
-                    skeleton_selected_signal.set(true);
-                    selected_skeleton_id_signal.set(skeleton_id.clone());
 
                     drop(renderer_state);
                     drop(state_helper_guard);
@@ -179,6 +171,21 @@ pub fn skeleton_item(
                             &joint_positions,
                         );
                     });
+
+                    // load view later to avoid lock?
+                    println!("update view");
+                    let current_view_signal = state_helper
+                        .current_view_signal
+                        .expect("Couldn't get current view signal");
+                    current_view_signal.set(destination_view.clone());
+
+                    drop(saved_state);
+                    drop(state_helper);
+
+                    skeleton_selected_signal.set(true);
+                    selected_skeleton_id_signal.set(skeleton_id.clone());
+
+                    println!("view updated");
                 },
                 active_btn,
             ),

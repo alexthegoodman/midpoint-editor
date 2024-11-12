@@ -1,48 +1,45 @@
-use midpoint_engine::animations::motion_path::{create_test_motion_paths, EasingType};
+use midpoint_engine::animations::motion_path::{EasingType, SkeletonMotionPath};
 use midpoint_engine::floem::event::EventListener;
 use midpoint_engine::floem::reactive::{create_rw_signal, RwSignal, SignalGet, SignalUpdate};
 use midpoint_engine::floem::taffy::Position;
-use midpoint_engine::floem_renderer::Renderer;
-use midpoint_engine::{
-    animations::motion_path::MotionPath,
-    floem::{
-        self,
-        context::{ComputeLayoutCx, EventCx, LayoutCx, PaintCx, StyleCx, UpdateCx},
-        event::{Event, EventPropagation},
-        kurbo::{self, Line, Point, Rect},
-        peniko::{Brush, Color},
-        style::Style,
-        taffy::{Display, Layout, NodeId, TaffyTree},
-        text::{Attrs, AttrsList, TextLayout},
-        unit::UnitExt,
-        views::{container, label, stack, Decorators},
-        AppState, View, ViewId,
-    },
+use midpoint_engine::floem::{
+    self,
+    context::{ComputeLayoutCx, EventCx, LayoutCx, PaintCx, StyleCx, UpdateCx},
+    event::{Event, EventPropagation},
+    kurbo::{self, Line, Point, Rect},
+    peniko::{Brush, Color},
+    style::Style,
+    taffy::{Display, Layout, NodeId, TaffyTree},
+    text::{Attrs, AttrsList, TextLayout},
+    unit::UnitExt,
+    views::{container, label, stack, Decorators},
+    AppState, View, ViewId,
 };
+use midpoint_engine::floem_renderer::Renderer;
 
 use std::time::Duration;
 
 /// State for the timeline component
 #[derive(Debug, Clone)]
 pub struct TimelineState {
-    current_time: Duration,
-    zoom_level: f64,
-    scroll_offset: f64,
-    selected_keyframes: Vec<KeyframeId>,
+    pub current_time: Duration,
+    pub zoom_level: f64,
+    pub scroll_offset: f64,
+    pub selected_keyframes: Vec<KeyframeId>,
     // dragging: Option<DragState>,
-    dragging: Option<DragOperation>,
-    hovered_keyframe: Option<(String, Duration)>,
-    property_expansions: im::HashMap<String, bool>,
+    pub dragging: Option<DragOperation>,
+    pub hovered_keyframe: Option<(String, Duration)>,
+    pub property_expansions: im::HashMap<String, bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KeyframeId {
-    property_path: String,
-    time: Duration,
+    pub property_path: String,
+    pub time: Duration,
 }
 
 #[derive(Debug, Clone)]
-enum DragState {
+pub enum DragState {
     Keyframe(KeyframeId),
     TimeSlider(f64),
     Scrolling { start_x: f64, start_offset: f64 },
@@ -51,14 +48,14 @@ enum DragState {
 /// Configuration for the timeline
 #[derive(Debug, Clone)]
 pub struct TimelineConfig {
-    width: f64,
-    height: f64,
-    header_height: f64,
-    property_width: f64,
-    row_height: f64,
+    pub width: f64,
+    pub height: f64,
+    pub header_height: f64,
+    pub property_width: f64,
+    pub row_height: f64,
     // Add offset parameters
-    offset_x: f64,
-    offset_y: f64,
+    pub offset_x: f64,
+    pub offset_y: f64,
 }
 
 impl Default for TimelineConfig {
@@ -78,7 +75,7 @@ impl Default for TimelineConfig {
 #[derive(Clone, Debug)]
 pub struct AnimationData {
     /// All motion paths in the animation
-    pub paths: Vec<MotionPath>,
+    pub paths: Vec<SkeletonMotionPath>,
     /// Total duration of the animation
     pub duration: Duration,
     /// Hierarchical property structure for UI
@@ -122,7 +119,7 @@ pub enum KeyframeValue {
 
 /// Helper to convert MotionPath data into UI-friendly AnimationData
 impl AnimationData {
-    pub fn from_motion_paths(paths: Vec<MotionPath>) -> Self {
+    pub fn from_motion_paths(paths: Vec<SkeletonMotionPath>) -> Self {
         let mut max_duration = Duration::from_secs(0);
         let mut properties = Vec::new();
 
@@ -177,27 +174,30 @@ impl AnimationData {
                 // Update position keyframes
                 // if let Some(pos) = keyframe.position {
                 position_prop.children[0].keyframes.push(UIKeyframe {
-                    time: keyframe.time,
-                    value: KeyframeValue::Position([keyframe.position[0], 0.0, 0.0]),
+                    time: keyframe.base.time,
+                    value: KeyframeValue::Position([keyframe.base.position[0], 0.0, 0.0]),
                     easing: keyframe
+                        .base
                         .easing
                         .as_ref()
                         .expect("Couldn't get easing")
                         .clone(),
                 });
                 position_prop.children[1].keyframes.push(UIKeyframe {
-                    time: keyframe.time,
-                    value: KeyframeValue::Position([0.0, keyframe.position[1], 0.0]),
+                    time: keyframe.base.time,
+                    value: KeyframeValue::Position([0.0, keyframe.base.position[1], 0.0]),
                     easing: keyframe
+                        .base
                         .easing
                         .as_ref()
                         .expect("Couldn't get easing")
                         .clone(),
                 });
                 position_prop.children[2].keyframes.push(UIKeyframe {
-                    time: keyframe.time,
-                    value: KeyframeValue::Position([0.0, 0.0, keyframe.position[2]]),
+                    time: keyframe.base.time,
+                    value: KeyframeValue::Position([0.0, 0.0, keyframe.base.position[2]]),
                     easing: keyframe
+                        .base
                         .easing
                         .as_ref()
                         .expect("Couldn't get easing")
@@ -208,9 +208,10 @@ impl AnimationData {
                 // Update rotation keyframes
                 // if let Some(rot) = keyframe.rotation {
                 rotation_prop.keyframes.push(UIKeyframe {
-                    time: keyframe.time,
-                    value: KeyframeValue::Rotation(keyframe.rotation),
+                    time: keyframe.base.time,
+                    value: KeyframeValue::Rotation(keyframe.base.rotation),
                     easing: keyframe
+                        .base
                         .easing
                         .as_ref()
                         .expect("Couldn't get easing")
@@ -264,7 +265,7 @@ impl TimelineGridView {
         })
     }
 
-    fn draw_time_grid(&self, cx: &mut PaintCx) {
+    pub fn draw_time_grid(&self, cx: &mut PaintCx) {
         let duration = self.animation_data.duration.as_secs_f64();
         let step = (0.5 / self.state.get().zoom_level).max(0.1);
 
@@ -295,7 +296,7 @@ impl TimelineGridView {
         }
     }
 
-    fn draw_keyframe(&self, cx: &mut PaintCx, center: Point, selected: bool) {
+    pub fn draw_keyframe(&self, cx: &mut PaintCx, center: Point, selected: bool) {
         let size = 6.0;
         let color = if selected {
             Color::rgb8(66, 135, 245)
@@ -334,7 +335,7 @@ impl TimelineGridView {
         cx.fill(&path, color, 1.0);
     }
 
-    fn draw_keyframes(&self, cx: &mut PaintCx) {
+    pub fn draw_keyframes(&self, cx: &mut PaintCx) {
         // Track visible vertical space used
         let mut current_y = self.config.header_height;
 
@@ -346,7 +347,7 @@ impl TimelineGridView {
         }
     }
 
-    fn draw_property_keyframes(
+    pub fn draw_property_keyframes(
         &self,
         cx: &mut PaintCx,
         property: &AnimationProperty,
@@ -433,7 +434,7 @@ impl TimelineGridView {
     }
 
     /// Calculate the Y position for a given property path
-    fn get_property_y_position(&self, property_path: &str) -> f64 {
+    pub fn get_property_y_position(&self, property_path: &str) -> f64 {
         let mut y_position = self.config.header_height;
 
         // Helper function to search through properties recursively
@@ -534,7 +535,7 @@ fn x_to_time(state: RwSignal<TimelineState>, config: TimelineConfig, x: f64) -> 
 }
 
 #[derive(Clone, Debug)]
-enum DragOperation {
+pub enum DragOperation {
     Playhead(f64),
     Keyframe {
         property_path: String,
@@ -611,23 +612,6 @@ impl View for TimelineGridView {
         }
     }
 
-    // fn event_before_children(&mut self, _cx: &mut EventCx, event: &Event) -> EventPropagation {
-    //     let layout = self.id.get_layout();
-    //     println!("event_before_children {:?}", layout);
-    //     match event {
-    //         Event::PointerDown(e) if e.button.is_primary() => self.handle_mouse_down(e.pos),
-    //         Event::PointerMove(e) => self.handle_mouse_move(e.pos),
-    //         Event::PointerUp(e) if e.button.is_primary() => self.handle_mouse_up(e.pos),
-    //         Event::PointerWheel(e) => self.handle_scroll(e.delta.y),
-    //         _ => EventPropagation::Continue,
-    //     }
-    // }
-
-    // fn compute_layout(&mut self, cx: &mut ComputeLayoutCx) -> Option<Rect> {
-    //     // println!("compute_layout");
-    //     Some(Rect::new(0.0, 0.0, self.config.width, self.config.height))
-    // }
-
     // Make sure compute_layout returns proper bounds
     fn compute_layout(&mut self, _cx: &mut ComputeLayoutCx) -> Option<Rect> {
         println!("compute_layout");
@@ -644,6 +628,7 @@ impl View for TimelineGridView {
         println!("update");
         self.id.request_layout();
     }
+
     // fn style_pass(&mut self, _cx: &mut StyleCx) {}
     fn layout(&mut self, _cx: &mut LayoutCx) -> NodeId {
         // println!("layout");
@@ -651,132 +636,10 @@ impl View for TimelineGridView {
         let node = self.id().new_taffy_node();
         node
     }
-    // fn event_after_children(&mut self, _cx: &mut EventCx, _event: &Event) -> EventPropagation {
-    //     EventPropagation::Continue
-    // }
+
     fn scroll_to(&mut self, _cx: &mut AppState, _target: ViewId, _rect: Option<Rect>) -> bool {
         false
     }
-}
-
-// Create test data for the timeline
-pub fn create_test_timeline() -> impl View {
-    let state = TimelineState {
-        current_time: Duration::from_secs_f64(0.0),
-        zoom_level: 1.0,
-        scroll_offset: 0.0,
-        selected_keyframes: Vec::new(),
-        property_expansions: im::HashMap::from_iter([
-            ("position".to_string(), true),
-            ("rotation".to_string(), true),
-        ]),
-        dragging: None,
-        hovered_keyframe: None,
-    };
-
-    let config = TimelineConfig {
-        width: 1200.0,
-        height: 300.0,
-        header_height: 30.0,
-        property_width: 200.0,
-        row_height: 24.0,
-        // offset_x: 325.0,
-        // offset_y: 300.0,
-        offset_x: 0.0,
-        offset_y: 0.0,
-    };
-
-    // Create some test keyframes for position
-    let position_x_keyframes = vec![
-        UIKeyframe {
-            time: Duration::from_secs_f64(0.0),
-            value: KeyframeValue::Position([0.0, 0.0, 0.0]),
-            easing: EasingType::Linear,
-        },
-        UIKeyframe {
-            time: Duration::from_secs_f64(1.5),
-            value: KeyframeValue::Position([100.0, 0.0, 0.0]),
-            easing: EasingType::EaseInOut,
-        },
-        UIKeyframe {
-            time: Duration::from_secs_f64(3.0),
-            value: KeyframeValue::Position([-50.0, 0.0, 0.0]),
-            easing: EasingType::EaseIn,
-        },
-    ];
-
-    let position_y_keyframes = vec![
-        UIKeyframe {
-            time: Duration::from_secs_f64(0.0),
-            value: KeyframeValue::Position([0.0, 0.0, 0.0]),
-            easing: EasingType::Linear,
-        },
-        UIKeyframe {
-            time: Duration::from_secs_f64(2.0),
-            value: KeyframeValue::Position([0.0, 150.0, 0.0]),
-            easing: EasingType::EaseOut,
-        },
-    ];
-
-    // Create test keyframes for rotation
-    let rotation_keyframes = vec![
-        UIKeyframe {
-            time: Duration::from_secs_f64(0.5),
-            value: KeyframeValue::Rotation([0.0, 0.0, 0.0, 1.0]),
-            easing: EasingType::Linear,
-        },
-        UIKeyframe {
-            time: Duration::from_secs_f64(2.5),
-            value: KeyframeValue::Rotation([0.0, 0.0, 0.707, 0.707]),
-            easing: EasingType::EaseInOut,
-        },
-    ];
-
-    // Create property hierarchy
-    let animation_data = AnimationData {
-        paths: create_test_motion_paths(), // We can add actual MotionPath data if needed
-        duration: Duration::from_secs_f64(4.0),
-        properties: vec![
-            AnimationProperty {
-                name: "Position".to_string(),
-                property_path: "position".to_string(),
-                children: vec![
-                    AnimationProperty {
-                        name: "X".to_string(),
-                        property_path: "position.x".to_string(),
-                        children: Vec::new(),
-                        keyframes: position_x_keyframes,
-                        depth: 1,
-                    },
-                    AnimationProperty {
-                        name: "Y".to_string(),
-                        property_path: "position.y".to_string(),
-                        children: Vec::new(),
-                        keyframes: position_y_keyframes,
-                        depth: 1,
-                    },
-                    AnimationProperty {
-                        name: "Z".to_string(),
-                        property_path: "position.z".to_string(),
-                        children: Vec::new(),
-                        keyframes: Vec::new(), // Empty for testing
-                        depth: 1,
-                    },
-                ],
-                keyframes: Vec::new(),
-                depth: 0,
-            },
-            AnimationProperty {
-                name: "Rotation".to_string(),
-                property_path: "rotation".to_string(),
-                children: Vec::new(),
-                keyframes: rotation_keyframes,
-                depth: 0,
-            },
-        ],
-    };
-
-    create_timeline(state, config, animation_data)
 }
 
 #[derive(Clone)]
@@ -1005,3 +868,123 @@ fn handle_scroll(state: RwSignal<TimelineState>, delta: f64) -> EventPropagation
         EventPropagation::Continue
     }
 }
+
+// // Create test data for the timeline
+// pub fn create_test_timeline() -> impl View {
+//     let state = TimelineState {
+//         current_time: Duration::from_secs_f64(0.0),
+//         zoom_level: 1.0,
+//         scroll_offset: 0.0,
+//         selected_keyframes: Vec::new(),
+//         property_expansions: im::HashMap::from_iter([
+//             ("position".to_string(), true),
+//             ("rotation".to_string(), true),
+//         ]),
+//         dragging: None,
+//         hovered_keyframe: None,
+//     };
+
+//     let config = TimelineConfig {
+//         width: 1200.0,
+//         height: 300.0,
+//         header_height: 30.0,
+//         property_width: 200.0,
+//         row_height: 24.0,
+//         // offset_x: 325.0,
+//         // offset_y: 300.0,
+//         offset_x: 0.0,
+//         offset_y: 0.0,
+//     };
+
+//     // Create some test keyframes for position
+//     let position_x_keyframes = vec![
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(0.0),
+//             value: KeyframeValue::Position([0.0, 0.0, 0.0]),
+//             easing: EasingType::Linear,
+//         },
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(1.5),
+//             value: KeyframeValue::Position([100.0, 0.0, 0.0]),
+//             easing: EasingType::EaseInOut,
+//         },
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(3.0),
+//             value: KeyframeValue::Position([-50.0, 0.0, 0.0]),
+//             easing: EasingType::EaseIn,
+//         },
+//     ];
+
+//     let position_y_keyframes = vec![
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(0.0),
+//             value: KeyframeValue::Position([0.0, 0.0, 0.0]),
+//             easing: EasingType::Linear,
+//         },
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(2.0),
+//             value: KeyframeValue::Position([0.0, 150.0, 0.0]),
+//             easing: EasingType::EaseOut,
+//         },
+//     ];
+
+//     // Create test keyframes for rotation
+//     let rotation_keyframes = vec![
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(0.5),
+//             value: KeyframeValue::Rotation([0.0, 0.0, 0.0, 1.0]),
+//             easing: EasingType::Linear,
+//         },
+//         UIKeyframe {
+//             time: Duration::from_secs_f64(2.5),
+//             value: KeyframeValue::Rotation([0.0, 0.0, 0.707, 0.707]),
+//             easing: EasingType::EaseInOut,
+//         },
+//     ];
+
+//     // Create property hierarchy
+//     let animation_data = AnimationData {
+//         paths: create_test_motion_paths(), // We can add actual MotionPath data if needed
+//         duration: Duration::from_secs_f64(4.0),
+//         properties: vec![
+//             AnimationProperty {
+//                 name: "Position".to_string(),
+//                 property_path: "position".to_string(),
+//                 children: vec![
+//                     AnimationProperty {
+//                         name: "X".to_string(),
+//                         property_path: "position.x".to_string(),
+//                         children: Vec::new(),
+//                         keyframes: position_x_keyframes,
+//                         depth: 1,
+//                     },
+//                     AnimationProperty {
+//                         name: "Y".to_string(),
+//                         property_path: "position.y".to_string(),
+//                         children: Vec::new(),
+//                         keyframes: position_y_keyframes,
+//                         depth: 1,
+//                     },
+//                     AnimationProperty {
+//                         name: "Z".to_string(),
+//                         property_path: "position.z".to_string(),
+//                         children: Vec::new(),
+//                         keyframes: Vec::new(), // Empty for testing
+//                         depth: 1,
+//                     },
+//                 ],
+//                 keyframes: Vec::new(),
+//                 depth: 0,
+//             },
+//             AnimationProperty {
+//                 name: "Rotation".to_string(),
+//                 property_path: "rotation".to_string(),
+//                 children: Vec::new(),
+//                 keyframes: rotation_keyframes,
+//                 depth: 0,
+//             },
+//         ],
+//     };
+
+//     create_timeline(state, config, animation_data)
+// }
