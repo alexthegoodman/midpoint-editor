@@ -6,6 +6,7 @@ use bytemuck::Contiguous;
 use editor_state::{EditorState, ObjectEdit, StateHelper, UIMessage};
 use helpers::auth::read_auth_token;
 use helpers::websocket::{Call, WebSocketManager};
+use midpoint_engine::animations::motion_path::update_skeleton_animation;
 use midpoint_engine::core::Rays::{create_ray_debug_mesh, create_ray_from_mouse};
 use midpoint_engine::core::RendererState::{Point, RendererState, WindowSize};
 use midpoint_engine::core::Viewport::Viewport;
@@ -184,6 +185,9 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                         0,
                         bytemuck::cast_slice(camera_matrix.as_slice()),
                     );
+
+                    // step animations
+                    engine.step_animations_pipeline(&gpu_resources.queue);
 
                     // draw debug raycast
                     if engine.last_ray.is_some() {

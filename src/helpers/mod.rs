@@ -1,3 +1,4 @@
+pub mod animations;
 pub mod auth;
 pub mod concepts;
 pub mod landscapes;

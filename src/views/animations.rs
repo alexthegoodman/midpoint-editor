@@ -1,15 +1,13 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-use super::keyframe_timeline::{
-    create_timeline, AnimationData, TimelineConfig, TimelineGridView, TimelineState,
-};
+use super::keyframe_timeline::{create_timeline, TimelineConfig, TimelineGridView, TimelineState};
 use super::part_browser::part_browser;
 use super::part_properties::{self, part_properties};
 use super::shared::dynamic_img;
 use super::skeleton_browser::skeleton_browser;
 use super::skeleton_properties::skeleton_properties;
-use midpoint_engine::animations::motion_path::SkeletonMotionPath;
+use midpoint_engine::animations::motion_path::{AnimationPlayback, SkeletonMotionPath};
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{card_styles, small_button, tab_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
@@ -28,6 +26,7 @@ use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::UIMessage;
 use crate::editor_state::{EditorState, StateHelper};
+use crate::helpers::animations::AnimationData;
 
 pub fn animations_view(
     state_helper: Arc<Mutex<StateHelper>>,
@@ -39,6 +38,7 @@ pub fn animations_view(
     let state_4 = Arc::clone(&state_helper);
     let state_5 = Arc::clone(&state_helper);
     let state_6 = Arc::clone(&state_helper);
+    let state_7 = Arc::clone(&state_helper);
 
     let gpu_2 = Arc::clone(&gpu_helper);
     let gpu_3 = Arc::clone(&gpu_helper);
@@ -260,6 +260,8 @@ pub fn animations_view(
                         animation_data.get().expect("Animation data not loaded"),
                     );
 
+                    let state_7 = Arc::clone(&state_7);
+
                     h_stack((
                         skeleton_properties(
                             state_4.clone(),
@@ -270,7 +272,32 @@ pub fn animations_view(
                         ),
                         v_stack((
                             h_stack((
-                                small_button("Play", "plus", |_| {}, active_1),
+                                small_button(
+                                    "Play",
+                                    "plus",
+                                    {
+                                        let state_7 = state_7.clone();
+
+                                        move |_| {
+                                            let state_helper = state_7.lock().unwrap();
+                                            let renderer_state = state_helper
+                                                .renderer_state
+                                                .as_ref()
+                                                .expect("Couldn't get RendererState");
+                                            let mut renderer_state = renderer_state.lock().unwrap();
+
+                                            let animation_playback =
+                                                AnimationPlayback::new(motion_paths.get());
+
+                                            println!("insert animation_playback");
+
+                                            renderer_state
+                                                .active_animations
+                                                .push(animation_playback);
+                                        }
+                                    },
+                                    active_1,
+                                ),
                                 small_button("Insert Keyframe", "plus", |_| {}, active_2),
                             ))
                             .style(|s| s.margin_top(300.0)),
