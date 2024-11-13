@@ -1,13 +1,16 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-use super::keyframe_timeline::{create_timeline, TimelineConfig, TimelineGridView, TimelineState};
+use super::keyframe_properties::keyframe_properties;
+use super::keyframe_timeline::{
+    create_timeline, KeyframeId, TimelineConfig, TimelineGridView, TimelineState,
+};
 use super::part_browser::part_browser;
 use super::part_properties::{self, part_properties};
 use super::shared::dynamic_img;
 use super::skeleton_browser::skeleton_browser;
 use super::skeleton_properties::skeleton_properties;
-use midpoint_engine::animations::motion_path::{AnimationPlayback, SkeletonMotionPath};
+use midpoint_engine::animations::motion_path::{AnimationPlayback, Keyframe, SkeletonMotionPath};
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{card_styles, small_button, tab_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
@@ -26,7 +29,7 @@ use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 
 use crate::editor_state::UIMessage;
 use crate::editor_state::{EditorState, StateHelper};
-use crate::helpers::animations::AnimationData;
+use crate::helpers::animations::{AnimationData, UIKeyframe};
 
 pub fn animations_view(
     state_helper: Arc<Mutex<StateHelper>>,
@@ -61,6 +64,9 @@ pub fn animations_view(
     let motion_paths = create_rw_signal(Vec::new());
     let animation_data: midpoint_engine::floem::reactive::RwSignal<Option<AnimationData>> =
         create_rw_signal(None);
+
+    let selected_keyframes: midpoint_engine::floem::reactive::RwSignal<Vec<UIKeyframe>> =
+        create_rw_signal(Vec::new());
 
     create_effect(move |_| {
         println!("start effect");
@@ -233,13 +239,14 @@ pub fn animations_view(
                         current_time: Duration::from_secs_f64(0.0),
                         zoom_level: 1.0,
                         scroll_offset: 0.0,
-                        selected_keyframes: Vec::new(),
+                        // selected_keyframes: Vec::new(),
                         property_expansions: im::HashMap::from_iter([
                             ("position".to_string(), true),
                             ("rotation".to_string(), true),
                         ]),
                         dragging: None,
                         hovered_keyframe: None,
+                        selected_keyframes,
                     };
 
                     let config = TimelineConfig {
@@ -260,15 +267,37 @@ pub fn animations_view(
                         animation_data.get().expect("Animation data not loaded"),
                     );
 
+                    let state_4 = Arc::clone(&state_4);
                     let state_7 = Arc::clone(&state_7);
+                    let gpu_3 = Arc::clone(&gpu_3);
+                    let viewport_3 = Arc::clone(&viewport_3);
+                    let state_7b = Arc::clone(&state_7);
+                    let gpu_3b = Arc::clone(&gpu_3);
+                    let viewport_3b = Arc::clone(&viewport_3);
 
                     h_stack((
-                        skeleton_properties(
-                            state_4.clone(),
-                            gpu_3.clone(),
-                            viewport_3.clone(),
-                            selected_skeleton_id_signal.get(),
-                            motion_paths,
+                        dyn_container(
+                            move || selected_keyframes.get().len() > 0,
+                            move |selected_keyframe_real| {
+                                if selected_keyframe_real {
+                                    keyframe_properties(
+                                        state_7b.clone(),
+                                        gpu_3b.clone(),
+                                        viewport_3b.clone(),
+                                        selected_keyframes.get(),
+                                    )
+                                    .into_any()
+                                } else {
+                                    skeleton_properties(
+                                        state_4.clone(),
+                                        gpu_3.clone(),
+                                        viewport_3.clone(),
+                                        selected_skeleton_id_signal.get(),
+                                        motion_paths,
+                                    )
+                                    .into_any()
+                                }
+                            },
                         ),
                         v_stack((
                             h_stack((

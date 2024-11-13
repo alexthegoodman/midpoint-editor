@@ -1,4 +1,5 @@
 use midpoint_engine::animations::motion_path::{EasingType, SkeletonMotionPath};
+use uuid::Uuid;
 
 use std::time::Duration;
 
@@ -28,8 +29,12 @@ pub struct AnimationProperty {
 }
 
 /// Represents a keyframe in the UI
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct UIKeyframe {
+    /// Used to associate with this speciifc UI Keyframe
+    pub id: String,
+    /// Used to associate with the SkeletonKeyframe for updates
+    pub skel_key_id: String,
     /// Time of the keyframe
     pub time: Duration,
     /// Value at this keyframe (could be position, rotation, etc)
@@ -39,7 +44,7 @@ pub struct UIKeyframe {
 }
 
 /// Possible values for keyframes
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum KeyframeValue {
     Position([f32; 3]),
     Rotation([f32; 4]),
@@ -103,7 +108,10 @@ impl AnimationData {
             for keyframe in &path.keyframes {
                 // Update position keyframes
                 // if let Some(pos) = keyframe.position {
+                let uuid1 = Uuid::new_v4();
                 position_prop.children[0].keyframes.push(UIKeyframe {
+                    id: uuid1.to_string(),
+                    skel_key_id: keyframe.id.clone(),
                     time: keyframe.base.time,
                     value: KeyframeValue::Position([keyframe.base.position[0], 0.0, 0.0]),
                     easing: keyframe
@@ -113,7 +121,10 @@ impl AnimationData {
                         .expect("Couldn't get easing")
                         .clone(),
                 });
+                let uuid2 = Uuid::new_v4();
                 position_prop.children[1].keyframes.push(UIKeyframe {
+                    id: uuid2.to_string(),
+                    skel_key_id: keyframe.id.clone(),
                     time: keyframe.base.time,
                     value: KeyframeValue::Position([0.0, keyframe.base.position[1], 0.0]),
                     easing: keyframe
@@ -123,7 +134,10 @@ impl AnimationData {
                         .expect("Couldn't get easing")
                         .clone(),
                 });
+                let uuid3 = Uuid::new_v4();
                 position_prop.children[2].keyframes.push(UIKeyframe {
+                    id: uuid3.to_string(),
+                    skel_key_id: keyframe.id.clone(),
                     time: keyframe.base.time,
                     value: KeyframeValue::Position([0.0, 0.0, keyframe.base.position[2]]),
                     easing: keyframe
@@ -137,7 +151,10 @@ impl AnimationData {
 
                 // Update rotation keyframes
                 // if let Some(rot) = keyframe.rotation {
+                let uuid4 = Uuid::new_v4();
                 rotation_prop.keyframes.push(UIKeyframe {
+                    id: uuid4.to_string(),
+                    skel_key_id: keyframe.id.clone(),
                     time: keyframe.base.time,
                     value: KeyframeValue::Rotation(keyframe.base.rotation),
                     easing: keyframe

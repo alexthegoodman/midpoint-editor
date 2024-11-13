@@ -1,4 +1,4 @@
-use midpoint_engine::animations::motion_path::{EasingType, SkeletonMotionPath};
+use midpoint_engine::animations::motion_path::{EasingType, Keyframe, SkeletonMotionPath};
 use midpoint_engine::floem::event::EventListener;
 use midpoint_engine::floem::reactive::{create_rw_signal, RwSignal, SignalGet, SignalUpdate};
 use midpoint_engine::floem::taffy::Position;
@@ -19,7 +19,7 @@ use midpoint_engine::floem_renderer::Renderer;
 
 use std::time::Duration;
 
-use crate::helpers::animations::{AnimationData, AnimationProperty};
+use crate::helpers::animations::{AnimationData, AnimationProperty, UIKeyframe};
 
 /// State for the timeline component
 #[derive(Debug, Clone)]
@@ -27,11 +27,10 @@ pub struct TimelineState {
     pub current_time: Duration,
     pub zoom_level: f64,
     pub scroll_offset: f64,
-    pub selected_keyframes: Vec<KeyframeId>,
-    // dragging: Option<DragState>,
     pub dragging: Option<DragOperation>,
     pub hovered_keyframe: Option<(String, Duration)>,
     pub property_expansions: im::HashMap<String, bool>,
+    pub selected_keyframes: RwSignal<Vec<UIKeyframe>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -211,10 +210,12 @@ impl TimelineGridView {
                 continue;
             }
 
-            let selected = self.state.get().selected_keyframes.contains(&KeyframeId {
-                property_path: property.property_path.clone(),
-                time: keyframe.time,
-            });
+            let selected = self
+                .state
+                .get()
+                .selected_keyframes
+                .get()
+                .contains(&keyframe);
 
             // Draw the keyframe marker
             self.draw_keyframe(
@@ -339,7 +340,7 @@ fn hit_test_keyframe(
     config: TimelineConfig,
     animation_data: AnimationData,
     point: Point,
-) -> Option<(String, Duration)> {
+) -> Option<(String, UIKeyframe)> {
     let current_y = config.header_height;
     let row_height = config.row_height.clone();
     let hit_radius = 6.0;
@@ -356,7 +357,7 @@ fn hit_test_keyframe(
                 let keyframe_point = Point::new(x, y_center);
 
                 if point.distance(keyframe_point) <= hit_radius {
-                    return Some((property.property_path.clone(), keyframe.time));
+                    return Some((property.property_path.clone(), keyframe.clone()));
                 }
             }
         }
@@ -584,7 +585,7 @@ fn handle_mouse_down(
     println!("handle_mouse_down");
     let state_data = state.get();
     // Check if clicking on a keyframe
-    if let Some((property_path, time)) =
+    if let Some((property_path, ui_keyframe)) =
         hit_test_keyframe(state, config.clone(), animation_data, pos)
     {
         // state_data.dragging = Some(DragOperation::Keyframe {
@@ -592,14 +593,17 @@ fn handle_mouse_down(
         //     original_time: time,
         //     start_x: pos.x,
         // });
-        println!("start move keyframe {:?}", time);
+        println!("start move keyframe {:?}", ui_keyframe.time);
         state.update(|s| {
             s.dragging = Some(DragOperation::Keyframe {
                 property_path,
-                original_time: time,
+                original_time: ui_keyframe.time,
                 start_x: pos.x,
             })
         });
+        let mut new_selection = Vec::new();
+        new_selection.push(ui_keyframe);
+        state.get().selected_keyframes.set(new_selection);
         return EventPropagation::Stop;
     }
 
@@ -656,11 +660,11 @@ fn handle_mouse_move(
             }
             _ => {
                 // Update hover state
-                if let Some((property_path, time)) =
+                if let Some((property_path, ui_keyframe)) =
                     hit_test_keyframe(state, config.clone(), animation_data, pos)
                 {
                     // state_data.hovered_keyframe = Some((property_path, time));
-                    state.update(|s| s.hovered_keyframe = Some((property_path, time)));
+                    state.update(|s| s.hovered_keyframe = Some((property_path, ui_keyframe.time)));
                 } else {
                     // state_data.hovered_keyframe = None;
                     state.update(|s| s.hovered_keyframe = None);

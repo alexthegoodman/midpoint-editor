@@ -6,6 +6,7 @@ pub mod component_browser;
 pub mod concepts;
 pub mod editor_settings;
 pub mod inputs;
+pub mod keyframe_properties;
 pub mod keyframe_timeline;
 pub mod landscape_browser;
 pub mod level_browser;
