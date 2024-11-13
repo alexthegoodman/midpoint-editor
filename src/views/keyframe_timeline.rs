@@ -77,7 +77,7 @@ pub struct TimelineGridView {
     id: ViewId,
     state: RwSignal<TimelineState>,
     config: TimelineConfig,
-    animation_data: AnimationData,
+    animation_data: RwSignal<Option<AnimationData>>,
     style: Style,
 }
 
@@ -85,7 +85,7 @@ impl TimelineGridView {
     pub fn new(
         state: TimelineState,
         config: TimelineConfig,
-        animation_data: AnimationData,
+        animation_data: RwSignal<Option<AnimationData>>,
     ) -> Self {
         Self {
             id: ViewId::new(),
@@ -107,7 +107,12 @@ impl TimelineGridView {
     }
 
     pub fn draw_time_grid(&self, cx: &mut PaintCx) {
-        let duration = self.animation_data.duration.as_secs_f64();
+        let duration = self
+            .animation_data
+            .get()
+            .expect("Couldn't get animation data")
+            .duration
+            .as_secs_f64();
         let step = (0.5 / self.state.get().zoom_level).max(0.1);
 
         for time in (0..(duration / step) as i32).map(|i| i as f64 * step) {
@@ -181,7 +186,12 @@ impl TimelineGridView {
         let mut current_y = self.config.header_height;
 
         // Draw keyframes for each property
-        for property in &self.animation_data.properties {
+        for property in &self
+            .animation_data
+            .get()
+            .expect("Couldn't get animation data")
+            .properties
+        {
             if let Some(y) = self.draw_property_keyframes(cx, property, current_y) {
                 current_y = y;
             }
@@ -202,6 +212,8 @@ impl TimelineGridView {
         }
 
         // Draw property's own keyframes
+        let selected_keyframes = self.state.get().selected_keyframes.get();
+
         for keyframe in &property.keyframes {
             let x = time_to_x(self.state, self.config.clone(), keyframe.time);
 
@@ -210,7 +222,6 @@ impl TimelineGridView {
                 continue;
             }
 
-            let selected_keyframes = self.state.get().selected_keyframes.get();
             let selected = selected_keyframes.contains(&keyframe);
 
             // Draw the keyframe marker
@@ -315,7 +326,11 @@ impl TimelineGridView {
 
         // Search through properties and return the found Y position or a default
         let y = find_property_y(
-            &self.animation_data.properties,
+            &self
+                .animation_data
+                .get()
+                .expect("Couldn't get animation data")
+                .properties,
             property_path,
             &mut y_position,
             self.config.row_height,
@@ -503,14 +518,14 @@ impl View for TimelineGridView {
 struct TimelineHandle {
     state: RwSignal<TimelineState>,
     config: TimelineConfig,
-    animation_data: AnimationData,
+    animation_data: RwSignal<Option<AnimationData>>,
     view_id: ViewId,
 }
 
 pub fn create_timeline(
     state: TimelineState,
     config: TimelineConfig,
-    animation_data: AnimationData,
+    animation_data: RwSignal<Option<AnimationData>>,
 ) -> impl View {
     let test = TimelineGridView::new(state, config, animation_data);
 
@@ -520,7 +535,7 @@ pub fn create_timeline(
     let handle = TimelineHandle {
         state: test.state.clone(),
         config: test.config.clone(),
-        animation_data: test.animation_data.clone(),
+        animation_data: test.animation_data,
         view_id,
     };
 
@@ -547,7 +562,7 @@ pub fn create_timeline(
             handle_mouse_down(
                 handle.state,
                 handle.config.clone(),
-                handle.animation_data.clone(),
+                handle.animation_data,
                 position,
             );
             handle.view_id.request_paint(); // Request repaint after state change
@@ -564,7 +579,7 @@ pub fn create_timeline(
             handle_mouse_move(
                 handle_move.state,
                 handle_move.config.clone(),
-                handle_move.animation_data.clone(),
+                handle_move.animation_data,
                 position,
             );
             handle.view_id.request_paint(); // Request repaint after state change
@@ -593,15 +608,18 @@ pub fn create_timeline(
 fn handle_mouse_down(
     state: RwSignal<TimelineState>,
     config: TimelineConfig,
-    animation_data: AnimationData,
+    animation_data: RwSignal<Option<AnimationData>>,
     pos: Point,
 ) -> EventPropagation {
     println!("handle_mouse_down");
     let state_data = state.get();
     // Check if clicking on a keyframe
-    if let Some((property_path, ui_keyframe)) =
-        hit_test_keyframe(state, config.clone(), animation_data, pos)
-    {
+    if let Some((property_path, ui_keyframe)) = hit_test_keyframe(
+        state,
+        config.clone(),
+        animation_data.get().expect("Couldn't get animation data"),
+        pos,
+    ) {
         // state_data.dragging = Some(DragOperation::Keyframe {
         //     property_path,
         //     original_time: time,
@@ -638,7 +656,7 @@ fn handle_mouse_down(
 fn handle_mouse_move(
     state: RwSignal<TimelineState>,
     config: TimelineConfig,
-    animation_data: AnimationData,
+    animation_data: RwSignal<Option<AnimationData>>,
     pos: Point,
 ) -> EventPropagation {
     // println!("handle_mouse_move");
@@ -674,9 +692,12 @@ fn handle_mouse_move(
             }
             _ => {
                 // Update hover state
-                if let Some((property_path, ui_keyframe)) =
-                    hit_test_keyframe(state, config.clone(), animation_data, pos)
-                {
+                if let Some((property_path, ui_keyframe)) = hit_test_keyframe(
+                    state,
+                    config.clone(),
+                    animation_data.get().expect("Couldn't get animation data"),
+                    pos,
+                ) {
                     // state_data.hovered_keyframe = Some((property_path, time));
                     state.update(|s| s.hovered_keyframe = Some((property_path, ui_keyframe.time)));
                 } else {

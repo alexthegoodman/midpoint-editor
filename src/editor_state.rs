@@ -245,8 +245,13 @@ impl StateHelper {
     }
 
     pub fn save_saved_state(&self, project_id: Uuid, saved_state: MutexGuard<SavedState>) {
-        let json = serde_json::to_string_pretty(&saved_state.to_owned())
-            .expect("Couldn't serialize saved state");
+        let owned = saved_state.to_owned();
+        self.save_saved_state_raw(project_id, owned);
+    }
+
+    pub fn save_saved_state_raw(&self, project_id: Uuid, saved_state: SavedState) {
+        let json =
+            serde_json::to_string_pretty(&saved_state).expect("Couldn't serialize saved state");
         let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
         let save_path = sync_dir
             .join("midpoint")

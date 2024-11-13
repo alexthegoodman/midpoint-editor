@@ -261,11 +261,7 @@ pub fn animations_view(
                         offset_y: 0.0,
                     };
 
-                    let keyframe_timeline = create_timeline(
-                        state,
-                        config,
-                        animation_data.get().expect("Animation data not loaded"),
-                    );
+                    let keyframe_timeline = create_timeline(state, config, animation_data);
 
                     let state_4 = Arc::clone(&state_4);
                     let state_7 = Arc::clone(&state_7);
@@ -285,6 +281,9 @@ pub fn animations_view(
                                         gpu_3b.clone(),
                                         viewport_3b.clone(),
                                         selected_keyframes.get(),
+                                        selected_skeleton_id_signal,
+                                        motion_paths,
+                                        animation_data,
                                     )
                                     .into_any()
                                 } else {
