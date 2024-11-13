@@ -210,12 +210,8 @@ impl TimelineGridView {
                 continue;
             }
 
-            let selected = self
-                .state
-                .get()
-                .selected_keyframes
-                .get()
-                .contains(&keyframe);
+            let selected_keyframes = self.state.get().selected_keyframes.get();
+            let selected = selected_keyframes.contains(&keyframe);
 
             // Draw the keyframe marker
             self.draw_keyframe(
@@ -341,7 +337,7 @@ fn hit_test_keyframe(
     animation_data: AnimationData,
     point: Point,
 ) -> Option<(String, UIKeyframe)> {
-    let current_y = config.header_height;
+    let mut current_y = config.header_height;
     let row_height = config.row_height.clone();
     let hit_radius = 6.0;
 
@@ -350,17 +346,35 @@ fn hit_test_keyframe(
         let property_height = row_height;
         let y_center = current_y + property_height / 2.0;
 
-        if (point.y - y_center).abs() <= hit_radius {
-            // Check keyframes
-            for keyframe in &property.keyframes {
+        // if (point.y - y_center).abs() <= hit_radius {
+        // Check keyframes
+        for keyframe in &property.keyframes {
+            let x = time_to_x(state, config.clone(), keyframe.time);
+            let keyframe_point = Point::new(x, y_center);
+
+            // need to go through children too
+
+            if point.distance(keyframe_point) <= hit_radius {
+                return Some((property.property_path.clone(), keyframe.clone()));
+            }
+        }
+        // }
+
+        for child in &property.children {
+            let property_height = row_height;
+            let y_center = current_y + property_height / 2.0;
+
+            for keyframe in &child.keyframes {
                 let x = time_to_x(state, config.clone(), keyframe.time);
                 let keyframe_point = Point::new(x, y_center);
 
                 if point.distance(keyframe_point) <= hit_radius {
-                    return Some((property.property_path.clone(), keyframe.clone()));
+                    return Some((child.property_path.clone(), keyframe.clone()));
                 }
             }
         }
+
+        current_y += row_height;
     }
     None
 }
