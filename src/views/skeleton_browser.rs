@@ -126,6 +126,7 @@ pub fn skeleton_item(
                         joints,
                         display_part.ik_chains.clone(),
                         &joint_positions,
+                        None,
                     );
 
                     // Now handle the connections using the cloned data
@@ -171,6 +172,7 @@ pub fn skeleton_item(
                             joints,
                             display_part.ik_chains.clone(),
                             &joint_positions,
+                            Some(connection.clone()),
                         );
                     });
 

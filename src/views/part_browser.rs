@@ -123,6 +123,7 @@ pub fn part_item(
                         selected_part_data.ik_chains.clone(),
                         &joint_positions,
                         // &joint_rotations,
+                        None,
                     );
                 },
                 active_btn,
