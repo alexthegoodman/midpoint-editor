@@ -124,6 +124,7 @@ pub fn skeleton_item(
                         part_id,
                         [0.0, 0.0, 0.0],
                         joints,
+                        display_part.ik_chains.clone(),
                         &joint_positions,
                     );
 
@@ -168,6 +169,7 @@ pub fn skeleton_item(
                             part_id,
                             position,
                             joints,
+                            display_part.ik_chains.clone(),
                             &joint_positions,
                         );
                     });

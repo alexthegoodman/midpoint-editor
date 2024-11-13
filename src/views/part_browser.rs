@@ -120,6 +120,7 @@ pub fn part_item(
                         part_id.clone(),
                         [0.0, 0.0, 0.0],
                         joints,
+                        selected_part_data.ik_chains.clone(),
                         &joint_positions,
                         // &joint_rotations,
                     );
