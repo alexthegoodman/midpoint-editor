@@ -29,12 +29,12 @@ use super::inputs::styled_input;
 
 pub fn refresh_animation_data(
     saved_state: &MutexGuard<SavedState>,
+    renderable_paths: Vec<SkeletonMotionPath>,
     selected_skeleton_id_signal: RwSignal<String>,
     motion_paths_signal: RwSignal<Vec<SkeletonMotionPath>>,
     animation_data_signal: RwSignal<Option<AnimationData>>,
 ) {
-    let relevant_paths: Vec<SkeletonMotionPath> = saved_state
-        .motion_paths
+    let relevant_paths: Vec<SkeletonMotionPath> = renderable_paths
         .iter()
         .filter(|mp| mp.target.skeleton_id == selected_skeleton_id_signal.get())
         .map(|mp| mp.clone())
@@ -57,7 +57,14 @@ pub fn update_position(
     motion_paths_signal: RwSignal<Vec<SkeletonMotionPath>>,
     animation_data_signal: RwSignal<Option<AnimationData>>,
     active_position: RwSignal<[f32; 3]>,
+    selected_keyframes: RwSignal<Vec<UIKeyframe>>,
 ) {
+    println!("running update_position");
+    // Check if we have selected keyframes first
+    if selected_keyframes.get().is_empty() {
+        return; // or handle empty case
+    }
+
     println!("updating keyframe position");
     // let mut renderer_state = state_helper
     //     .renderer_state
@@ -104,6 +111,8 @@ pub fn update_position(
     // update_arrow_collider_position
     // renderer_state.update_arrow_collider_position(new_position);
 
+    println!("new_position {:?}", new_position);
+
     active_position.set(new_position);
 
     // update renderer_state.selected_object_data with new ComponentData
@@ -121,6 +130,30 @@ pub fn update_position(
 
     // drop(renderer_state);
 
+    // // save in saved_state
+    // let mut saved_state = state_helper
+    //     .saved_state
+    //     .as_mut()
+    //     .expect("Couldn't get saved state")
+    //     .lock()
+    //     .unwrap();
+
+    // // Update the component within the saved state
+    // let motion_paths = &mut saved_state.motion_paths;
+
+    // if let Some(mutable_keyframe) = motion_paths.iter_mut().find_map(|mp| {
+    //     mp.keyframes
+    //         .iter_mut()
+    //         .find(|kf| kf.id == active_keyframe.skel_key_id)
+    // }) {
+    //     mutable_keyframe.base.position = new_position;
+    //     mutable_keyframe.ik_target_position = Some(new_position);
+    // }
+
+    // let renderable_paths = motion_paths.clone();
+
+    // drop(saved_state);
+
     // save in saved_state
     let mut saved_state = state_helper
         .saved_state
@@ -132,13 +165,18 @@ pub fn update_position(
     // Update the component within the saved state
     let motion_paths = &mut saved_state.motion_paths;
 
-    if let Some(mutable_keyframe) = motion_paths.iter_mut().find_map(|mp| {
-        mp.keyframes
+    // Find and update the correct motion path
+    for motion_path in motion_paths.iter_mut() {
+        if let Some(keyframe) = motion_path
+            .keyframes
             .iter_mut()
             .find(|kf| kf.id == active_keyframe.skel_key_id)
-    }) {
-        mutable_keyframe.base.position = new_position;
-        mutable_keyframe.ik_target_position = Some(new_position);
+        {
+            keyframe.base.position = new_position;
+            keyframe.ik_target_position = Some(new_position);
+            println!("set key prop {:?}", new_position);
+            break; // Exit once we've found and updated the keyframe
+        }
     }
 
     let renderable_paths = motion_paths.clone();
@@ -157,12 +195,10 @@ pub fn update_position(
         .lock()
         .unwrap();
 
-    refresh_animation_data(
-        &saved_state,
-        selected_skeleton_id_signal,
-        motion_paths_signal,
-        animation_data_signal,
-    );
+    // println!(
+    //     "renderable_paths {:?} {:?}",
+    //     renderable_paths, saved_state.motion_paths
+    // );
 
     // Save the updated state
     state_helper.save_saved_state_raw(project_id, saved_state.clone());
@@ -176,13 +212,36 @@ pub fn update_position(
     let mut renderer_state = renderer_state.lock().unwrap();
 
     // update rendererstate for visuals
-    let animation_playback = AnimationPlayback::new(renderable_paths);
+    let animation_playback = AnimationPlayback::new(renderable_paths.clone());
     let mut current_animations = Vec::new();
     current_animations.push(animation_playback);
     renderer_state.active_animations = current_animations;
 
+    println!("Inserted AnimationPlayback!");
+
     drop(renderer_state);
+
+    let saved_state = state_helper
+        .saved_state
+        .as_ref()
+        .expect("Couldn't get saved state")
+        .lock()
+        .unwrap();
+
+    refresh_animation_data(
+        &saved_state,
+        renderable_paths.clone(),
+        selected_skeleton_id_signal,
+        motion_paths_signal,
+        animation_data_signal,
+    );
+
+    drop(saved_state);
     drop(state_helper);
+
+    let mut new_selections = Vec::new();
+    new_selections.push(new_data.clone());
+    selected_keyframes.set(new_selections);
 }
 
 pub fn update_rotation(
@@ -196,6 +255,7 @@ pub fn update_rotation(
     motion_paths_signal: RwSignal<Vec<SkeletonMotionPath>>,
     animation_data_signal: RwSignal<Option<AnimationData>>,
     active_rotation: RwSignal<[f32; 3]>,
+    selected_keyframes: RwSignal<Vec<UIKeyframe>>,
 ) {
     println!("updating keyframe rotation");
     let mut renderer_state = state_helper
@@ -294,6 +354,29 @@ pub fn update_rotation(
 
     drop(renderer_state);
 
+    // // save in saved_state
+    // let mut saved_state = state_helper
+    //     .saved_state
+    //     .as_mut()
+    //     .expect("Couldn't get saved state")
+    //     .lock()
+    //     .unwrap();
+
+    // // Update the component within the saved state
+    // let motion_paths = &mut saved_state.motion_paths;
+
+    // if let Some(mutable_keyframe) = motion_paths.iter_mut().find_map(|mp| {
+    //     mp.keyframes
+    //         .iter_mut()
+    //         .find(|kf| kf.id == active_keyframe.skel_key_id)
+    // }) {
+    //     mutable_keyframe.base.rotation = new_rotation;
+    // }
+
+    // let renderable_paths = motion_paths.clone();
+
+    // drop(saved_state);
+
     // save in saved_state
     let mut saved_state = state_helper
         .saved_state
@@ -305,12 +388,16 @@ pub fn update_rotation(
     // Update the component within the saved state
     let motion_paths = &mut saved_state.motion_paths;
 
-    if let Some(mutable_keyframe) = motion_paths.iter_mut().find_map(|mp| {
-        mp.keyframes
+    // Find and update the correct motion path
+    for motion_path in motion_paths.iter_mut() {
+        if let Some(keyframe) = motion_path
+            .keyframes
             .iter_mut()
             .find(|kf| kf.id == active_keyframe.skel_key_id)
-    }) {
-        mutable_keyframe.base.rotation = new_rotation;
+        {
+            keyframe.base.rotation = new_rotation;
+            break; // Exit once we've found and updated the keyframe
+        }
     }
 
     let renderable_paths = motion_paths.clone();
@@ -329,8 +416,13 @@ pub fn update_rotation(
         .lock()
         .unwrap();
 
+    let mut new_selections = Vec::new();
+    new_selections.push(new_data.clone());
+    selected_keyframes.set(new_selections);
+
     refresh_animation_data(
         &saved_state,
+        renderable_paths.clone(),
         selected_skeleton_id_signal,
         motion_paths_signal,
         animation_data_signal,
@@ -369,6 +461,7 @@ pub fn update_joint_rotation(
     motion_paths_signal: RwSignal<Vec<SkeletonMotionPath>>,
     animation_data_signal: RwSignal<Option<AnimationData>>,
     active_joint_rotations: RwSignal<Option<std::collections::HashMap<String, [f32; 4]>>>,
+    selected_keyframes: RwSignal<Vec<UIKeyframe>>,
 ) {
     println!("updating keyframe joint rotation");
     let mut renderer_state = state_helper
@@ -472,6 +565,39 @@ pub fn update_joint_rotation(
 
     drop(renderer_state);
 
+    // // save in saved_state
+    // let mut saved_state = state_helper
+    //     .saved_state
+    //     .as_mut()
+    //     .expect("Couldn't get saved state")
+    //     .lock()
+    //     .unwrap();
+
+    // // Update the component within the saved state
+    // let motion_paths = &mut saved_state.motion_paths;
+
+    // if let Some(mutable_keyframe) = motion_paths.iter_mut().find_map(|mp| {
+    //     mp.keyframes
+    //         .iter_mut()
+    //         .find(|kf| kf.id == active_keyframe.skel_key_id)
+    // }) {
+    //     // mutable_keyframe.base.rotation = new_rotation;
+    //     let mutable_rotation = mutable_keyframe
+    //         .joint_rotations
+    //         .as_mut()
+    //         .expect("Couldn't get rotations")
+    //         .get_mut(&joint_id)
+    //         .expect("Couldn't get specific rotation");
+    //     mutable_rotation[0] = new_rotation[0];
+    //     mutable_rotation[1] = new_rotation[1];
+    //     mutable_rotation[2] = new_rotation[2];
+    //     mutable_rotation[3] = new_rotation[3];
+    // }
+
+    // let renderable_paths = motion_paths.clone();
+
+    // drop(saved_state);
+
     // save in saved_state
     let mut saved_state = state_helper
         .saved_state
@@ -483,22 +609,27 @@ pub fn update_joint_rotation(
     // Update the component within the saved state
     let motion_paths = &mut saved_state.motion_paths;
 
-    if let Some(mutable_keyframe) = motion_paths.iter_mut().find_map(|mp| {
-        mp.keyframes
+    // Find and update the correct motion path
+    for motion_path in motion_paths.iter_mut() {
+        if let Some(keyframe) = motion_path
+            .keyframes
             .iter_mut()
             .find(|kf| kf.id == active_keyframe.skel_key_id)
-    }) {
-        // mutable_keyframe.base.rotation = new_rotation;
-        let mutable_rotation = mutable_keyframe
-            .joint_rotations
-            .as_mut()
-            .expect("Couldn't get rotations")
-            .get_mut(&joint_id)
-            .expect("Couldn't get specific rotation");
-        mutable_rotation[0] = new_rotation[0];
-        mutable_rotation[1] = new_rotation[1];
-        mutable_rotation[2] = new_rotation[2];
-        mutable_rotation[3] = new_rotation[3];
+        {
+            // keyframe.base.rotation = new_rotation;
+            let mutable_rotation = keyframe
+                .joint_rotations
+                .as_mut()
+                .expect("Couldn't get rotations")
+                .get_mut(&joint_id)
+                .expect("Couldn't get specific rotation");
+            mutable_rotation[0] = new_rotation[0];
+            mutable_rotation[1] = new_rotation[1];
+            mutable_rotation[2] = new_rotation[2];
+            mutable_rotation[3] = new_rotation[3];
+
+            break; // Exit once we've found and updated the keyframe
+        }
     }
 
     let renderable_paths = motion_paths.clone();
@@ -517,8 +648,14 @@ pub fn update_joint_rotation(
         .lock()
         .unwrap();
 
+    let mut new_selections = Vec::new();
+    new_selections.push(new_data.clone());
+    selected_keyframes.set(new_selections);
+
+    // causes remounting of keyframe_properties?
     refresh_animation_data(
         &saved_state,
+        renderable_paths.clone(),
         selected_skeleton_id_signal,
         motion_paths_signal,
         animation_data_signal,
@@ -549,11 +686,13 @@ pub fn keyframe_properties(
     state_helper: Arc<Mutex<StateHelper>>,
     gpu_helper: Arc<Mutex<GpuHelper>>,
     viewport: Arc<Mutex<Viewport>>,
-    selected_keyframes: Vec<UIKeyframe>,
+    selected_keyframes: RwSignal<Vec<UIKeyframe>>,
     selected_skeleton_id_signal: RwSignal<String>,
     motion_paths_signal: RwSignal<Vec<SkeletonMotionPath>>,
     animation_data_signal: RwSignal<Option<AnimationData>>,
 ) -> impl View {
+    println!("compute keyframe_properties layout");
+
     let state_2 = Arc::clone(&state_helper);
     let state_3 = Arc::clone(&state_helper);
     let state_4 = Arc::clone(&state_helper);
@@ -581,6 +720,7 @@ pub fn keyframe_properties(
     let halfs = (aside_width / 2.0) + (5.0 * 2.0);
 
     create_effect(move |_| {
+        println!("starting effect");
         let state_5 = state_5.clone();
         let state_helper = state_5.lock().unwrap();
         let saved_state = state_helper
@@ -590,6 +730,7 @@ pub fn keyframe_properties(
         let saved_state = saved_state.lock().unwrap();
 
         let active_keyframe_data = selected_keyframes
+            .get()
             .get(0)
             .expect("Couldn't get active keyframe")
             .clone(); // only support editing one for now
@@ -602,6 +743,25 @@ pub fn keyframe_properties(
                     .find(|kf| kf.id == active_keyframe_data.skel_key_id)
             })
             .cloned();
+
+        println!("continuing effect");
+
+        // Update the component within the saved state
+        let motion_paths = &saved_state.motion_paths;
+
+        // Find and update the correct motion path
+        for motion_path in motion_paths.iter() {
+            if let Some(keyframe) = motion_path
+                .keyframes
+                .iter()
+                .find(|kf| kf.id == active_keyframe_data.skel_key_id)
+            {
+                // keyframe.base.position = new_position;
+                // keyframe.ik_target_position = Some(new_position);
+                println!("key prop on mount {:?}", keyframe.base.position);
+                break; // Exit once we've found and updated the keyframe
+            }
+        }
 
         let mut keyframe_type = "".to_string();
         let position_data = match active_keyframe_data.value {
@@ -653,6 +813,8 @@ pub fn keyframe_properties(
             .joint_rotations
             .clone();
 
+        println!("finishing effect");
+
         active_keyframe.set(Some(active_keyframe_data));
         active_skel_keyframe.set(active_skel_keyframe_data);
         active_position.set(position_data);
@@ -660,6 +822,8 @@ pub fn keyframe_properties(
         active_keyframe_type.set(keyframe_type);
         active_ik_target_position.set(ik_target_position);
         active_joint_rotations.set(joint_rotations);
+
+        println!("Properties effect!");
     });
 
     v_stack((
@@ -685,6 +849,26 @@ pub fn keyframe_properties(
             label(|| "Properties").style(|s| s.font_size(24.0).font_weight(Weight::THIN)),
         ))
         .style(|s| s.margin_bottom(12.0)),
+        label(move || {
+            format!(
+                "ID: {}",
+                active_keyframe
+                    .get()
+                    .expect("Couldn't get active keyframe")
+                    .id
+            )
+        })
+        .style(|s| s.font_size(12.0).font_weight(Weight::THIN)),
+        label(move || {
+            format!(
+                "SK ID: {}",
+                active_keyframe
+                    .get()
+                    .expect("Couldn't get active keyframe")
+                    .skel_key_id
+            )
+        })
+        .style(|s| s.font_size(12.0).font_weight(Weight::THIN)),
         dyn_container(
             move || active_keyframe_type.get(),
             move |keyframe_type| {
@@ -697,7 +881,9 @@ pub fn keyframe_properties(
                     h_stack((
                         styled_input(
                             "X Position:".to_string(),
-                            &active_position.get()[0].to_string(),
+                            &active_position
+                                .try_get()
+                                .map_or("0".to_string(), |pos| pos[0].to_string()),
                             "X Position",
                             Box::new({
                                 move |mut state_helper_passed, value| {
@@ -711,6 +897,7 @@ pub fn keyframe_properties(
                                         motion_paths_signal,
                                         animation_data_signal,
                                         active_position,
+                                        selected_keyframes,
                                     )
                                 }
                             }),
@@ -720,7 +907,9 @@ pub fn keyframe_properties(
                         .style(move |s| s.width(thirds).margin_right(5.0)),
                         styled_input(
                             "Y Position:".to_string(),
-                            &active_position.get()[1].to_string(),
+                            &active_position
+                                .try_get()
+                                .map_or("0".to_string(), |pos| pos[1].to_string()),
                             "Y Position",
                             Box::new({
                                 move |mut state_helper_passed, value| {
@@ -734,6 +923,7 @@ pub fn keyframe_properties(
                                         motion_paths_signal,
                                         animation_data_signal,
                                         active_position,
+                                        selected_keyframes,
                                     )
                                 }
                             }),
@@ -743,7 +933,9 @@ pub fn keyframe_properties(
                         .style(move |s| s.width(thirds).margin_right(5.0)),
                         styled_input(
                             "Z Position:".to_string(),
-                            &active_position.get()[2].to_string(),
+                            &active_position
+                                .try_get()
+                                .map_or("0".to_string(), |pos| pos[2].to_string()),
                             "Z Position",
                             Box::new({
                                 move |mut state_helper_passed, value| {
@@ -757,6 +949,7 @@ pub fn keyframe_properties(
                                         motion_paths_signal,
                                         animation_data_signal,
                                         active_position,
+                                        selected_keyframes,
                                     )
                                 }
                             }),
@@ -771,7 +964,9 @@ pub fn keyframe_properties(
                     h_stack((
                         styled_input(
                             "X Rotation:".to_string(),
-                            &active_rotation.get()[0].to_string(),
+                            &active_rotation
+                                .try_get()
+                                .map_or("0".to_string(), |pos| pos[0].to_string()),
                             "X Degrees",
                             Box::new({
                                 move |mut state_helper_passed, value| {
@@ -785,6 +980,7 @@ pub fn keyframe_properties(
                                         motion_paths_signal,
                                         animation_data_signal,
                                         active_rotation,
+                                        selected_keyframes,
                                     )
                                 }
                             }),
@@ -794,7 +990,9 @@ pub fn keyframe_properties(
                         .style(move |s| s.width(thirds).margin_right(5.0)),
                         styled_input(
                             "Y Rotation:".to_string(),
-                            &active_rotation.get()[1].to_string(),
+                            &active_rotation
+                                .try_get()
+                                .map_or("0".to_string(), |pos| pos[1].to_string()),
                             "Y Degrees",
                             Box::new({
                                 move |mut state_helper_passed, value| {
@@ -808,6 +1006,7 @@ pub fn keyframe_properties(
                                         motion_paths_signal,
                                         animation_data_signal,
                                         active_rotation,
+                                        selected_keyframes,
                                     )
                                 }
                             }),
@@ -817,7 +1016,9 @@ pub fn keyframe_properties(
                         .style(move |s| s.width(thirds).margin_right(5.0)),
                         styled_input(
                             "Z Rotation:".to_string(),
-                            &active_rotation.get()[2].to_string(),
+                            &active_rotation
+                                .try_get()
+                                .map_or("0".to_string(), |pos| pos[2].to_string()),
                             "Z Degrees",
                             Box::new({
                                 move |mut state_helper_passed, value| {
@@ -831,6 +1032,7 @@ pub fn keyframe_properties(
                                         motion_paths_signal,
                                         animation_data_signal,
                                         active_rotation,
+                                        selected_keyframes,
                                     )
                                 }
                             }),
@@ -903,6 +1105,7 @@ pub fn keyframe_properties(
                                                 motion_paths_signal,
                                                 animation_data_signal,
                                                 active_joint_rotations,
+                                                selected_keyframes,
                                             )
                                         }
                                     }),
@@ -927,6 +1130,7 @@ pub fn keyframe_properties(
                                                 motion_paths_signal,
                                                 animation_data_signal,
                                                 active_joint_rotations,
+                                                selected_keyframes,
                                             )
                                         }
                                     }),
@@ -951,6 +1155,7 @@ pub fn keyframe_properties(
                                                 motion_paths_signal,
                                                 animation_data_signal,
                                                 active_joint_rotations,
+                                                selected_keyframes,
                                             )
                                         }
                                     }),

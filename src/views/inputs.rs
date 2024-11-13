@@ -60,6 +60,7 @@ pub fn styled_input(
     mut state_helper: Arc<Mutex<StateHelper>>,
     name: String,
 ) -> impl IntoView {
+    println!("create styled_input {:?}", initial_value);
     let value = create_rw_signal(initial_value.to_string());
 
     let state_2 = Arc::clone(&state_helper);

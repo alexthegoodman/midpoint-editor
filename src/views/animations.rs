@@ -280,7 +280,7 @@ pub fn animations_view(
                                         state_7b.clone(),
                                         gpu_3b.clone(),
                                         viewport_3b.clone(),
-                                        selected_keyframes.get(),
+                                        selected_keyframes,
                                         selected_skeleton_id_signal,
                                         motion_paths,
                                         animation_data,

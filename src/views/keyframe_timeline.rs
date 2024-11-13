@@ -106,6 +106,38 @@ impl TimelineGridView {
         })
     }
 
+    pub fn draw_property_label(&self, cx: &mut PaintCx, property: &AnimationProperty, y: f64) {
+        let mut text_layout = TextLayout::new();
+        let mut attrs_list = AttrsList::new(Attrs::new().color(Color::BLACK).font_size(12.0));
+
+        // Indent based on hierarchy level
+        let indent = property.property_path.matches('/').count() as f64 * 15.0;
+
+        // Add expand/collapse indicator if has children
+        let prefix = if !property.children.is_empty() {
+            if self
+                .state
+                .get()
+                .property_expansions
+                .get(&property.property_path)
+                .copied()
+                .unwrap_or(false)
+            {
+                "▼ "
+            } else {
+                "▶ "
+            }
+        } else {
+            "  "
+        };
+
+        text_layout.set_text(&format!("{}{}", prefix, property.name), attrs_list);
+        cx.draw_text(
+            &text_layout,
+            Point::new(10.0 + indent, y + self.config.row_height / 2.0 - 6.0),
+        );
+    }
+
     pub fn draw_time_grid(&self, cx: &mut PaintCx) {
         let duration = self
             .animation_data
@@ -259,6 +291,8 @@ impl TimelineGridView {
             }
         }
 
+        self.draw_property_label(cx, property, current_y);
+
         current_y += self.config.row_height;
 
         // If the property is expanded, draw child properties
@@ -271,6 +305,7 @@ impl TimelineGridView {
             .unwrap_or(false)
         {
             for child in &property.children {
+                self.draw_property_label(cx, child, current_y);
                 if let Some(new_y) = self.draw_property_keyframes(cx, child, current_y) {
                     current_y = new_y;
                 } else {
@@ -375,21 +410,27 @@ fn hit_test_keyframe(
         }
         // }
 
-        for child in &property.children {
-            let property_height = row_height;
-            let y_center = current_y + property_height / 2.0;
+        if property.children.len() > 0 {
+            current_y += row_height; // for header expansion row
 
-            for keyframe in &child.keyframes {
-                let x = time_to_x(state, config.clone(), keyframe.time);
-                let keyframe_point = Point::new(x, y_center);
+            for child in &property.children {
+                let property_height = row_height;
+                let y_center = current_y + property_height / 2.0;
 
-                if point.distance(keyframe_point) <= hit_radius {
-                    return Some((child.property_path.clone(), keyframe.clone()));
+                for keyframe in &child.keyframes {
+                    let x = time_to_x(state, config.clone(), keyframe.time);
+                    let keyframe_point = Point::new(x, y_center);
+
+                    if point.distance(keyframe_point) <= hit_radius {
+                        return Some((child.property_path.clone(), keyframe.clone()));
+                    }
                 }
-            }
-        }
 
-        current_y += row_height;
+                current_y += row_height;
+            }
+        } else {
+            current_y += row_height;
+        }
     }
     None
 }
