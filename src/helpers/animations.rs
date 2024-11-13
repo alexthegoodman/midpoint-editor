@@ -62,29 +62,30 @@ impl AnimationData {
         let mut position_prop = AnimationProperty {
             name: "Position".to_string(),
             property_path: "position".to_string(),
-            children: vec![
-                AnimationProperty {
-                    name: "X".to_string(),
-                    property_path: "position.x".to_string(),
-                    children: Vec::new(),
-                    keyframes: Vec::new(),
-                    depth: 1,
-                },
-                AnimationProperty {
-                    name: "Y".to_string(),
-                    property_path: "position.y".to_string(),
-                    children: Vec::new(),
-                    keyframes: Vec::new(),
-                    depth: 1,
-                },
-                AnimationProperty {
-                    name: "Z".to_string(),
-                    property_path: "position.z".to_string(),
-                    children: Vec::new(),
-                    keyframes: Vec::new(),
-                    depth: 1,
-                },
-            ],
+            // children: vec![
+            //     AnimationProperty {
+            //         name: "X".to_string(),
+            //         property_path: "position.x".to_string(),
+            //         children: Vec::new(),
+            //         keyframes: Vec::new(),
+            //         depth: 1,
+            //     },
+            //     AnimationProperty {
+            //         name: "Y".to_string(),
+            //         property_path: "position.y".to_string(),
+            //         children: Vec::new(),
+            //         keyframes: Vec::new(),
+            //         depth: 1,
+            //     },
+            //     AnimationProperty {
+            //         name: "Z".to_string(),
+            //         property_path: "position.z".to_string(),
+            //         children: Vec::new(),
+            //         keyframes: Vec::new(),
+            //         depth: 1,
+            //     },
+            // ],
+            children: Vec::new(),
             keyframes: Vec::new(),
             depth: 0,
         };
@@ -109,11 +110,15 @@ impl AnimationData {
                 // Update position keyframes
                 // if let Some(pos) = keyframe.position {
                 let uuid1 = Uuid::new_v4();
-                position_prop.children[0].keyframes.push(UIKeyframe {
+                position_prop.keyframes.push(UIKeyframe {
                     id: uuid1.to_string(),
                     skel_key_id: keyframe.id.clone(),
                     time: keyframe.base.time,
-                    value: KeyframeValue::Position([keyframe.base.position[0], 0.0, 0.0]),
+                    value: KeyframeValue::Position([
+                        keyframe.base.position[0],
+                        keyframe.base.position[1],
+                        keyframe.base.position[2],
+                    ]),
                     easing: keyframe
                         .base
                         .easing
@@ -121,32 +126,32 @@ impl AnimationData {
                         .expect("Couldn't get easing")
                         .clone(),
                 });
-                let uuid2 = Uuid::new_v4();
-                position_prop.children[1].keyframes.push(UIKeyframe {
-                    id: uuid2.to_string(),
-                    skel_key_id: keyframe.id.clone(),
-                    time: keyframe.base.time,
-                    value: KeyframeValue::Position([0.0, keyframe.base.position[1], 0.0]),
-                    easing: keyframe
-                        .base
-                        .easing
-                        .as_ref()
-                        .expect("Couldn't get easing")
-                        .clone(),
-                });
-                let uuid3 = Uuid::new_v4();
-                position_prop.children[2].keyframes.push(UIKeyframe {
-                    id: uuid3.to_string(),
-                    skel_key_id: keyframe.id.clone(),
-                    time: keyframe.base.time,
-                    value: KeyframeValue::Position([0.0, 0.0, keyframe.base.position[2]]),
-                    easing: keyframe
-                        .base
-                        .easing
-                        .as_ref()
-                        .expect("Couldn't get easing")
-                        .clone(),
-                });
+                // let uuid2 = Uuid::new_v4();
+                // position_prop.children[1].keyframes.push(UIKeyframe {
+                //     id: uuid2.to_string(),
+                //     skel_key_id: keyframe.id.clone(),
+                //     time: keyframe.base.time,
+                //     value: KeyframeValue::Position([0.0, keyframe.base.position[1], 0.0]),
+                //     easing: keyframe
+                //         .base
+                //         .easing
+                //         .as_ref()
+                //         .expect("Couldn't get easing")
+                //         .clone(),
+                // });
+                // let uuid3 = Uuid::new_v4();
+                // position_prop.children[2].keyframes.push(UIKeyframe {
+                //     id: uuid3.to_string(),
+                //     skel_key_id: keyframe.id.clone(),
+                //     time: keyframe.base.time,
+                //     value: KeyframeValue::Position([0.0, 0.0, keyframe.base.position[2]]),
+                //     easing: keyframe
+                //         .base
+                //         .easing
+                //         .as_ref()
+                //         .expect("Couldn't get easing")
+                //         .clone(),
+                // });
                 // }
 
                 // Update rotation keyframes
