@@ -10,6 +10,7 @@ use midpoint_engine::floem::views::h_stack;
 use midpoint_engine::helpers::saved_data::{self, SavedState};
 use nalgebra::{Quaternion, UnitQuaternion};
 use std::borrow::Borrow;
+use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -1077,8 +1078,14 @@ pub fn keyframe_properties(
                     dyn_stack(
                         move || {
                             active_joint_rotations
-                                .get()
-                                .expect("Couldn't get joint rotations")
+                                .try_get()
+                                .map_or(HashMap::new(), |map| {
+                                    if let Some(hashmap) = map {
+                                        hashmap
+                                    } else {
+                                        HashMap::new()
+                                    }
+                                })
                                 .into_iter()
                                 .enumerate()
                         },
