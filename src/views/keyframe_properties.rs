@@ -658,19 +658,6 @@ pub fn update_joint_rotation(
         .lock()
         .unwrap();
 
-    let mut new_selections = Vec::new();
-    new_selections.push(new_data.clone());
-    selected_keyframes.set(new_selections);
-
-    // causes remounting of keyframe_properties?
-    refresh_animation_data(
-        &saved_state,
-        renderable_paths.clone(),
-        selected_skeleton_id_signal,
-        motion_paths_signal,
-        animation_data_signal,
-    );
-
     // Save the updated state
     state_helper.save_saved_state_raw(project_id, saved_state.clone());
 
@@ -683,13 +670,36 @@ pub fn update_joint_rotation(
     let mut renderer_state = renderer_state.lock().unwrap();
 
     // update rendererstate for visuals
-    let animation_playback = AnimationPlayback::new(renderable_paths);
+    let animation_playback = AnimationPlayback::new(renderable_paths.clone());
     let mut current_animations = Vec::new();
     current_animations.push(animation_playback);
     renderer_state.active_animations = current_animations;
 
     drop(renderer_state);
+    // drop(state_helper);
+
+    let saved_state = state_helper
+        .saved_state
+        .as_ref()
+        .expect("Couldn't get saved state")
+        .lock()
+        .unwrap();
+
+    // causes remounting of keyframe_properties?
+    refresh_animation_data(
+        &saved_state,
+        renderable_paths.clone(),
+        selected_skeleton_id_signal,
+        motion_paths_signal,
+        animation_data_signal,
+    );
+
+    drop(saved_state);
     drop(state_helper);
+
+    let mut new_selections = Vec::new();
+    new_selections.push(new_data.clone());
+    selected_keyframes.set(new_selections);
 }
 
 pub fn keyframe_properties(
