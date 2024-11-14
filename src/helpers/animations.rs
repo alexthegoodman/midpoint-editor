@@ -58,48 +58,48 @@ impl AnimationData {
         let mut max_duration = Duration::from_secs(0);
         let mut properties = Vec::new();
 
-        // Create top-level property groups
-        let mut position_prop = AnimationProperty {
-            name: "Position".to_string(),
-            property_path: "position".to_string(),
-            // children: vec![
-            //     AnimationProperty {
-            //         name: "X".to_string(),
-            //         property_path: "position.x".to_string(),
-            //         children: Vec::new(),
-            //         keyframes: Vec::new(),
-            //         depth: 1,
-            //     },
-            //     AnimationProperty {
-            //         name: "Y".to_string(),
-            //         property_path: "position.y".to_string(),
-            //         children: Vec::new(),
-            //         keyframes: Vec::new(),
-            //         depth: 1,
-            //     },
-            //     AnimationProperty {
-            //         name: "Z".to_string(),
-            //         property_path: "position.z".to_string(),
-            //         children: Vec::new(),
-            //         keyframes: Vec::new(),
-            //         depth: 1,
-            //     },
-            // ],
-            children: Vec::new(),
-            keyframes: Vec::new(),
-            depth: 0,
-        };
-
-        let mut rotation_prop = AnimationProperty {
-            name: "Rotation".to_string(),
-            property_path: "rotation".to_string(),
-            children: Vec::new(),
-            keyframes: Vec::new(),
-            depth: 0,
-        };
-
         // Process each motion path
         for path in &paths {
+            // Create top-level property groups
+            let mut position_prop = AnimationProperty {
+                name: format!("{} Position", path.id.clone()),
+                property_path: "position".to_string(),
+                // children: vec![
+                //     AnimationProperty {
+                //         name: "X".to_string(),
+                //         property_path: "position.x".to_string(),
+                //         children: Vec::new(),
+                //         keyframes: Vec::new(),
+                //         depth: 1,
+                //     },
+                //     AnimationProperty {
+                //         name: "Y".to_string(),
+                //         property_path: "position.y".to_string(),
+                //         children: Vec::new(),
+                //         keyframes: Vec::new(),
+                //         depth: 1,
+                //     },
+                //     AnimationProperty {
+                //         name: "Z".to_string(),
+                //         property_path: "position.z".to_string(),
+                //         children: Vec::new(),
+                //         keyframes: Vec::new(),
+                //         depth: 1,
+                //     },
+                // ],
+                children: Vec::new(),
+                keyframes: Vec::new(),
+                depth: 0,
+            };
+
+            let mut rotation_prop = AnimationProperty {
+                name: format!("{} Rotation", path.id.clone()),
+                property_path: "rotation".to_string(),
+                children: Vec::new(),
+                keyframes: Vec::new(),
+                depth: 0,
+            };
+
             // Update max duration
             if path.duration > max_duration {
                 max_duration = path.duration;
@@ -171,10 +171,10 @@ impl AnimationData {
                 });
                 // }
             }
-        }
 
-        properties.push(position_prop);
-        properties.push(rotation_prop);
+            properties.push(position_prop);
+            properties.push(rotation_prop);
+        }
 
         Self {
             paths,
