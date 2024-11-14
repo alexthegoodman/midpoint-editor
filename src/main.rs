@@ -189,6 +189,8 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                     // step animations
                     engine.step_animations_pipeline(&gpu_resources.queue);
 
+                    render_pass.set_bind_group(3, &engine.light_state.bind_group, &[]); // Set light bind group
+
                     // draw debug raycast
                     if engine.last_ray.is_some() {
                         let (vertex_buffer, index_buffer, index_count) =
@@ -1104,6 +1106,24 @@ async fn main() {
 
                 let model_bind_group_layout = Arc::new(model_bind_group_layout);
 
+                let light_bind_group_layout = gpu_resources.device.create_bind_group_layout(
+                    &wgpu::BindGroupLayoutDescriptor {
+                        entries: &[wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        }],
+                        label: Some("light_bind_group_layout"),
+                    },
+                );
+
+                let light_bind_group_layout = Arc::new(light_bind_group_layout);
+
                 let texture_bind_group_layout = gpu_resources.device.create_bind_group_layout(
                     &wgpu::BindGroupLayoutDescriptor {
                         entries: &[
@@ -1187,6 +1207,7 @@ async fn main() {
                                 &camera_bind_group_layout,
                                 &model_bind_group_layout,
                                 &texture_bind_group_layout,
+                                &light_bind_group_layout,
                             ],
                             push_constant_ranges: &[],
                         });
@@ -1325,6 +1346,7 @@ async fn main() {
                     window_width,
                     window_height,
                     camera_bind_group_layout.clone(),
+                    light_bind_group_layout.clone(),
                 )
                 .await;
 
