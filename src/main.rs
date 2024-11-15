@@ -29,7 +29,7 @@ use midpoint_engine::floem::reactive::SignalUpdate;
 use wgpu::util::DeviceExt;
 
 use midpoint_engine::floem::context::PaintState;
-use midpoint_engine::floem::{Application, CustomRenderCallback};
+use midpoint_engine::floem::{Application, CustomRenderCallback, EngineHandle};
 use midpoint_engine::floem::{GpuHelper, View, WindowHandle};
 use undo::{Edit, Record};
 
@@ -41,12 +41,19 @@ pub mod views;
 type RenderCallback<'a> = dyn for<'b> Fn(
         wgpu::CommandEncoder,
         wgpu::SurfaceTexture,
-        wgpu::TextureView,
-        wgpu::TextureView,
-        &WindowHandle,
+        Arc<wgpu::TextureView>,
+        Arc<wgpu::TextureView>,
+        // &WindowHandle,
+        &Arc<GpuResources>,
+        &EngineHandle,
+    ) -> (
+        Option<wgpu::CommandEncoder>,
+        Option<wgpu::SurfaceTexture>,
+        Option<Arc<wgpu::TextureView>>,
+        Option<Arc<wgpu::TextureView>>,
     ) + 'a;
 
-pub fn get_engine_editor(handle: &WindowHandle) -> Option<Arc<Mutex<RendererState>>> {
+pub fn get_engine_editor(handle: &EngineHandle) -> Option<Arc<Mutex<RendererState>>> {
     handle.user_editor.as_ref().and_then(|e| {
         // let guard = e.lock().ok()?;
         let cloned = e.downcast_ref::<Arc<Mutex<RendererState>>>().cloned();
@@ -59,10 +66,12 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
     Box::new(
         move |mut encoder: wgpu::CommandEncoder,
               frame: wgpu::SurfaceTexture,
-              view: wgpu::TextureView,
-              resolve_view: wgpu::TextureView,
-              window_handle: &WindowHandle| {
-            let mut handle = window_handle.borrow();
+              view: Arc<wgpu::TextureView>,
+              resolve_view: Arc<wgpu::TextureView>,
+              //   window_handle: &WindowHandle
+              gpu_resources: &Arc<GpuResources>,
+              engine_handle: &EngineHandle| {
+            // let mut handle = window_handle.borrow();
 
             // let engine = handle
             //     .user_engine
@@ -70,131 +79,154 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
             //     .expect("Couldn't get user engine")
             //     .lock()
             //     .unwrap();
-            let mut editor = get_engine_editor(handle);
+            let mut editor = get_engine_editor(engine_handle);
             let mut engine = editor
                 .as_mut()
                 .expect("Couldn't get user engine")
                 .lock()
                 .unwrap();
 
-            if let Some(gpu_resources) = &handle.gpu_resources {
-                if engine.current_view == "scene".to_string()
-                    || engine.current_view == "animation_part".to_string()
-                    || engine.current_view == "animation_skeleton".to_string()
-                    || engine.current_view == "animation_retarget".to_string()
-                {
-                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        label: None,
-                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view: &view,
-                            resolve_target: Some(&resolve_view),
-                            ops: wgpu::Operations {
-                                // load: wgpu::LoadOp::Clear(wgpu::Color {
-                                //     // grey background
-                                //     r: 0.15,
-                                //     g: 0.15,
-                                //     b: 0.15,
-                                //     // white background
-                                //     // r: 1.0,
-                                //     // g: 1.0,
-                                //     // b: 1.0,
-                                //     a: 1.0,
-                                // }),
-                                // load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
-                                load: wgpu::LoadOp::Load,
-                                store: wgpu::StoreOp::Store,
-                            },
-                        })],
-                        // depth_stencil_attachment: None,
-                        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                            view: &handle
-                                .gpu_helper
-                                .as_ref()
-                                .expect("Couldn't get gpu helper")
-                                .lock()
-                                .unwrap()
-                                .depth_view
-                                .as_ref()
-                                .expect("Couldn't fetch depth view"), // This is the depth texture view
-                            depth_ops: Some(wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(1.0), // Clear to max depth
-                                store: wgpu::StoreOp::Store,
-                            }),
-                            stencil_ops: None, // Set this if using stencil
-                        }),
-                        timestamp_writes: None,
-                        occlusion_query_set: None,
-                    });
-
-                    // println!("Render frame...");
-
-                    // update terrain managers manually without step function
-                    engine.update_terrain_managers(&gpu_resources.device, 0.1);
-
-                    let viewport = engine.viewport.lock().unwrap();
-                    let window_size = WindowSize {
-                        width: viewport.width as u32,
-                        height: viewport.height as u32,
-                    };
-
-                    // Render partial screen content
-                    // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
-                    let aside_width = 500;
-                    let timeline_height = 500;
-                    let toolbar_height = 50;
-                    if (engine.current_view == "animation_skeleton".to_string()) {
-                        // height minus timeline, width minus sidebar
-                        render_pass.set_scissor_rect(
-                            aside_width,
-                            0,
-                            window_size.width - aside_width,
-                            window_size.height - timeline_height,
-                        );
-                    } else {
-                        // height minus toolbar, width minus sidebar
-                        render_pass.set_scissor_rect(
-                            aside_width,
-                            toolbar_height,
-                            window_size.width - aside_width,
-                            window_size.height - toolbar_height,
-                        );
-                    }
-
-                    render_pass.set_pipeline(
-                        &handle
-                            .render_pipeline
+            // if let Some(gpu_resources) = &handle.gpu_resources {
+            if engine.current_view == "scene".to_string()
+                || engine.current_view == "animation_part".to_string()
+                || engine.current_view == "animation_skeleton".to_string()
+                || engine.current_view == "animation_retarget".to_string()
+            {
+                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: Some(&resolve_view),
+                        ops: wgpu::Operations {
+                            // load: wgpu::LoadOp::Clear(wgpu::Color {
+                            //     // grey background
+                            //     r: 0.15,
+                            //     g: 0.15,
+                            //     b: 0.15,
+                            //     // white background
+                            //     // r: 1.0,
+                            //     // g: 1.0,
+                            //     // b: 1.0,
+                            //     a: 1.0,
+                            // }),
+                            // load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
+                            // load: wgpu::LoadOp::Load,
+                            // store: wgpu::StoreOp::Store,
+                            load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    // depth_stencil_attachment: None,
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &engine_handle
+                            .gpu_helper
                             .as_ref()
-                            .expect("Couldn't fetch render pipeline"),
-                    );
+                            .expect("Couldn't get gpu helper")
+                            .lock()
+                            .unwrap()
+                            .depth_view
+                            .as_ref()
+                            .expect("Couldn't fetch depth view"), // This is the depth texture view
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0), // Clear to max depth
+                            store: wgpu::StoreOp::Store,
+                        }),
+                        stencil_ops: None, // Set this if using stencil
+                    }),
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                });
 
-                    drop(viewport);
+                // println!("Render frame...");
 
-                    let mut camera = get_camera();
+                // update terrain managers manually without step function
+                engine.update_terrain_managers(&gpu_resources.device, 0.1);
 
-                    // TODO: bad to call on every frame?
-                    camera.update();
+                let viewport = engine.viewport.lock().unwrap();
+                let window_size = WindowSize {
+                    width: viewport.width as u32,
+                    height: viewport.height as u32,
+                };
 
-                    let last_ray = engine.last_ray.expect("Couldn't get last ray");
-
-                    // update rapier collisions
-                    engine.update_rapier();
-
-                    let camera_matrix = camera.view_projection_matrix;
-                    gpu_resources.queue.write_buffer(
-                        &engine.camera_uniform_buffer,
+                // Render partial screen content
+                // render_pass.set_viewport(100.0, 100.0, 200.0, 200.0, 0.0, 1.0);
+                let aside_width = 500;
+                let timeline_height = 500;
+                let toolbar_height = 50;
+                if (engine.current_view == "animation_skeleton".to_string()) {
+                    // height minus timeline, width minus sidebar
+                    render_pass.set_scissor_rect(
+                        aside_width,
                         0,
-                        bytemuck::cast_slice(camera_matrix.as_slice()),
+                        window_size.width - aside_width,
+                        window_size.height - timeline_height,
+                    );
+                } else {
+                    // height minus toolbar, width minus sidebar
+                    render_pass.set_scissor_rect(
+                        aside_width,
+                        toolbar_height,
+                        window_size.width - aside_width,
+                        window_size.height - toolbar_height,
+                    );
+                }
+
+                render_pass.set_pipeline(
+                    &engine_handle
+                        .render_pipeline
+                        .as_ref()
+                        .expect("Couldn't fetch render pipeline"),
+                );
+
+                drop(viewport);
+
+                let mut camera = get_camera();
+
+                // TODO: bad to call on every frame?
+                camera.update();
+
+                let last_ray = engine.last_ray.expect("Couldn't get last ray");
+
+                // update rapier collisions
+                engine.update_rapier();
+
+                let camera_matrix = camera.view_projection_matrix;
+                gpu_resources.queue.write_buffer(
+                    &engine.camera_uniform_buffer,
+                    0,
+                    bytemuck::cast_slice(camera_matrix.as_slice()),
+                );
+
+                // step animations
+                engine.step_animations_pipeline(&gpu_resources.queue);
+
+                render_pass.set_bind_group(3, &engine.light_state.bind_group, &[]); // Set light bind group
+
+                // draw debug raycast
+                if engine.last_ray.is_some() {
+                    let (vertex_buffer, index_buffer, index_count) =
+                        create_ray_debug_mesh(&last_ray, 1000.0, 0.0002, &gpu_resources.device);
+                    render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                    render_pass.set_bind_group(1, &engine.translation_gizmo.bind_group, &[]);
+                    render_pass.set_bind_group(
+                        2,
+                        &engine.translation_gizmo.texture_bind_group,
+                        &[],
                     );
 
-                    // step animations
-                    engine.step_animations_pipeline(&gpu_resources.queue);
+                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                    render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-                    render_pass.set_bind_group(3, &engine.light_state.bind_group, &[]); // Set light bind group
+                    render_pass.draw_indexed(0..index_count as u32, 0, 0..1);
+                }
 
-                    // draw debug raycast
-                    if engine.last_ray.is_some() {
-                        let (vertex_buffer, index_buffer, index_count) =
-                            create_ray_debug_mesh(&last_ray, 1000.0, 0.0002, &gpu_resources.device);
+                // draw gizmo
+                if engine.object_selected.is_some() {
+                    if engine.active_gizmo == "translate".to_string() {
+                        engine
+                            .translation_gizmo
+                            .transform
+                            .update_uniform_buffer(&gpu_resources.queue);
                         render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
                         render_pass.set_bind_group(1, &engine.translation_gizmo.bind_group, &[]);
                         render_pass.set_bind_group(
@@ -203,194 +235,162 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             &[],
                         );
 
-                        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                        render_pass
-                            .set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-
-                        render_pass.draw_indexed(0..index_count as u32, 0, 0..1);
-                    }
-
-                    // draw gizmo
-                    if engine.object_selected.is_some() {
-                        if engine.active_gizmo == "translate".to_string() {
-                            engine
-                                .translation_gizmo
-                                .transform
-                                .update_uniform_buffer(&gpu_resources.queue);
-                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                            render_pass.set_bind_group(
-                                1,
-                                &engine.translation_gizmo.bind_group,
-                                &[],
+                        engine.translation_gizmo.arrows.iter().for_each(|arrow| {
+                            render_pass.set_vertex_buffer(0, arrow.vertex_buffer.slice(..));
+                            render_pass.set_index_buffer(
+                                arrow.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint32,
                             );
-                            render_pass.set_bind_group(
-                                2,
-                                &engine.translation_gizmo.texture_bind_group,
-                                &[],
-                            );
-
-                            engine.translation_gizmo.arrows.iter().for_each(|arrow| {
-                                render_pass.set_vertex_buffer(0, arrow.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    arrow.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint32,
-                                );
-                                render_pass.draw_indexed(0..arrow.index_count, 0, 0..1);
-                            });
-                        } else if engine.active_gizmo == "rotate".to_string() {
-                            engine
-                                .rotation_gizmo
-                                .transform
-                                .update_uniform_buffer(&gpu_resources.queue);
-                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                            render_pass.set_bind_group(1, &engine.rotation_gizmo.bind_group, &[]);
-                            render_pass.set_bind_group(
-                                2,
-                                &engine.rotation_gizmo.texture_bind_group,
-                                &[],
-                            );
-
-                            engine.rotation_gizmo.rings.iter().for_each(|ring| {
-                                render_pass.set_vertex_buffer(0, ring.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    ring.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint32,
-                                );
-                                render_pass.draw_indexed(0..ring.index_count, 0, 0..1);
-                            });
-                        } else if engine.active_gizmo == "scale".to_string() {
-                            engine
-                                .scale_gizmo
-                                .transform
-                                .update_uniform_buffer(&gpu_resources.queue);
-                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                            render_pass.set_bind_group(1, &engine.scale_gizmo.bind_group, &[]);
-                            render_pass.set_bind_group(
-                                2,
-                                &engine.scale_gizmo.texture_bind_group,
-                                &[],
-                            );
-
-                            engine.scale_gizmo.handles.iter().for_each(|handle| {
-                                render_pass.set_vertex_buffer(0, handle.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    handle.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint32,
-                                );
-                                render_pass.draw_indexed(0..handle.index_count, 0, 0..1);
-                            });
-                        }
-                    }
-
-                    // draw utility grids
-                    for grid in &engine.grids {
+                            render_pass.draw_indexed(0..arrow.index_count, 0, 0..1);
+                        });
+                    } else if engine.active_gizmo == "rotate".to_string() {
+                        engine
+                            .rotation_gizmo
+                            .transform
+                            .update_uniform_buffer(&gpu_resources.queue);
                         render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                        render_pass.set_bind_group(1, &grid.bind_group, &[]);
-                        render_pass.set_bind_group(2, &grid.texture_bind_group, &[]);
-
-                        render_pass.set_vertex_buffer(0, grid.vertex_buffer.slice(..));
-                        render_pass.set_index_buffer(
-                            grid.index_buffer.slice(..),
-                            wgpu::IndexFormat::Uint16,
+                        render_pass.set_bind_group(1, &engine.rotation_gizmo.bind_group, &[]);
+                        render_pass.set_bind_group(
+                            2,
+                            &engine.rotation_gizmo.texture_bind_group,
+                            &[],
                         );
 
-                        render_pass.draw_indexed(0..grid.index_count, 0, 0..1);
-                    }
-
-                    if (engine.current_view == "animation_part".to_string()
-                        || engine.current_view == "animation_skeleton".to_string())
-                    {
-                        // draw skeleton parts
-                        for part in &engine.skeleton_parts {
-                            for bone in &part.bones {
-                                // bone
-                                bone.transform.update_uniform_buffer(&gpu_resources.queue);
-                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                                render_pass.set_bind_group(1, &bone.bind_group, &[]);
-
-                                render_pass.set_vertex_buffer(0, bone.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    bone.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint16,
-                                );
-
-                                render_pass.draw_indexed(0..bone.num_indices as u32, 0, 0..1);
-
-                                // joint sphere
-                                bone.joint_sphere
-                                    .transform
-                                    .update_uniform_buffer(&gpu_resources.queue);
-                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                                render_pass.set_bind_group(1, &bone.joint_sphere.bind_group, &[]);
-
-                                render_pass.set_vertex_buffer(
-                                    0,
-                                    bone.joint_sphere.vertex_buffer.slice(..),
-                                );
-                                render_pass.set_index_buffer(
-                                    bone.joint_sphere.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint16,
-                                );
-
-                                render_pass.draw_indexed(
-                                    0..bone.joint_sphere.index_count as u32,
-                                    0,
-                                    0..1,
-                                );
-                            }
-                        }
-                    } else if (engine.current_view == "scene".to_string()) {
-                        // draw cubes
-                        for cube in &engine.cubes {
-                            cube.transform.update_uniform_buffer(&gpu_resources.queue);
-                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                            render_pass.set_bind_group(1, &cube.bind_group, &[]);
-
-                            render_pass.set_vertex_buffer(0, cube.vertex_buffer.slice(..));
+                        engine.rotation_gizmo.rings.iter().for_each(|ring| {
+                            render_pass.set_vertex_buffer(0, ring.vertex_buffer.slice(..));
                             render_pass.set_index_buffer(
-                                cube.index_buffer.slice(..),
-                                wgpu::IndexFormat::Uint16,
+                                ring.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint32,
                             );
+                            render_pass.draw_indexed(0..ring.index_count, 0, 0..1);
+                        });
+                    } else if engine.active_gizmo == "scale".to_string() {
+                        engine
+                            .scale_gizmo
+                            .transform
+                            .update_uniform_buffer(&gpu_resources.queue);
+                        render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                        render_pass.set_bind_group(1, &engine.scale_gizmo.bind_group, &[]);
+                        render_pass.set_bind_group(2, &engine.scale_gizmo.texture_bind_group, &[]);
 
-                            render_pass.draw_indexed(0..cube.index_count as u32, 0, 0..1);
-                        }
-
-                        for model in &engine.models {
-                            for mesh in &model.meshes {
-                                mesh.transform.update_uniform_buffer(&gpu_resources.queue);
-                                render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
-                                render_pass.set_bind_group(1, &mesh.bind_group, &[]);
-                                render_pass.set_bind_group(2, &mesh.texture_bind_group, &[]);
-
-                                render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
-                                render_pass.set_index_buffer(
-                                    mesh.index_buffer.slice(..),
-                                    wgpu::IndexFormat::Uint16,
-                                );
-
-                                render_pass.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
-                            }
-                        }
-
-                        // Render all terrain managers
-                        for terrain_manager in &engine.terrain_managers {
-                            terrain_manager.render(
-                                &mut render_pass,
-                                &engine.camera_bind_group,
-                                &gpu_resources.queue,
+                        engine.scale_gizmo.handles.iter().for_each(|handle| {
+                            render_pass.set_vertex_buffer(0, handle.vertex_buffer.slice(..));
+                            render_pass.set_index_buffer(
+                                handle.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint32,
                             );
-                        }
+                            render_pass.draw_indexed(0..handle.index_count, 0, 0..1);
+                        });
                     }
                 }
 
-                let command_buffer = encoder.finish();
-                gpu_resources.queue.submit(Some(command_buffer));
-                gpu_resources.device.poll(wgpu::Maintain::Poll);
-                frame.present();
-            } else {
-                println!("GPU resources not available yet");
+                // draw utility grids
+                for grid in &engine.grids {
+                    render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                    render_pass.set_bind_group(1, &grid.bind_group, &[]);
+                    render_pass.set_bind_group(2, &grid.texture_bind_group, &[]);
+
+                    render_pass.set_vertex_buffer(0, grid.vertex_buffer.slice(..));
+                    render_pass
+                        .set_index_buffer(grid.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+
+                    render_pass.draw_indexed(0..grid.index_count, 0, 0..1);
+                }
+
+                if (engine.current_view == "animation_part".to_string()
+                    || engine.current_view == "animation_skeleton".to_string())
+                {
+                    // draw skeleton parts
+                    for part in &engine.skeleton_parts {
+                        for bone in &part.bones {
+                            // bone
+                            bone.transform.update_uniform_buffer(&gpu_resources.queue);
+                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                            render_pass.set_bind_group(1, &bone.bind_group, &[]);
+
+                            render_pass.set_vertex_buffer(0, bone.vertex_buffer.slice(..));
+                            render_pass.set_index_buffer(
+                                bone.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint16,
+                            );
+
+                            render_pass.draw_indexed(0..bone.num_indices as u32, 0, 0..1);
+
+                            // joint sphere
+                            bone.joint_sphere
+                                .transform
+                                .update_uniform_buffer(&gpu_resources.queue);
+                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                            render_pass.set_bind_group(1, &bone.joint_sphere.bind_group, &[]);
+
+                            render_pass
+                                .set_vertex_buffer(0, bone.joint_sphere.vertex_buffer.slice(..));
+                            render_pass.set_index_buffer(
+                                bone.joint_sphere.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint16,
+                            );
+
+                            render_pass.draw_indexed(
+                                0..bone.joint_sphere.index_count as u32,
+                                0,
+                                0..1,
+                            );
+                        }
+                    }
+                } else if (engine.current_view == "scene".to_string()) {
+                    // draw cubes
+                    for cube in &engine.cubes {
+                        cube.transform.update_uniform_buffer(&gpu_resources.queue);
+                        render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                        render_pass.set_bind_group(1, &cube.bind_group, &[]);
+
+                        render_pass.set_vertex_buffer(0, cube.vertex_buffer.slice(..));
+                        render_pass.set_index_buffer(
+                            cube.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint16,
+                        );
+
+                        render_pass.draw_indexed(0..cube.index_count as u32, 0, 0..1);
+                    }
+
+                    for model in &engine.models {
+                        for mesh in &model.meshes {
+                            mesh.transform.update_uniform_buffer(&gpu_resources.queue);
+                            render_pass.set_bind_group(0, &engine.camera_bind_group, &[]);
+                            render_pass.set_bind_group(1, &mesh.bind_group, &[]);
+                            render_pass.set_bind_group(2, &mesh.texture_bind_group, &[]);
+
+                            render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                            render_pass.set_index_buffer(
+                                mesh.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint16,
+                            );
+
+                            render_pass.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
+                        }
+                    }
+
+                    // Render all terrain managers
+                    for terrain_manager in &engine.terrain_managers {
+                        terrain_manager.render(
+                            &mut render_pass,
+                            &engine.camera_bind_group,
+                            &gpu_resources.queue,
+                        );
+                    }
+                }
             }
+
+            // let command_buffer = encoder.finish();
+            // gpu_resources.queue.submit(Some(command_buffer));
+            // gpu_resources.device.poll(wgpu::Maintain::Poll);
+            // frame.present();
+            // } else {
+            //     println!("GPU resources not available yet");
             // }
+            // }
+
+            (Some(encoder), Some(frame), Some(view), Some(resolve_view))
         },
     )
 }
@@ -876,6 +876,7 @@ fn handle_keyboard_input(
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use wgpu::StoreOp;
 
 #[tokio::main]
 async fn main() {
@@ -1069,6 +1070,12 @@ async fn main() {
                 //             push_constant_ranges: &[],
                 //         });
 
+                // let swapchain_capabilities = gpu_resources
+                //     .surface
+                //     .get_capabilities(&gpu_resources.adapter);
+                // let swapchain_format = swapchain_capabilities.formats[0]; // Choosing the first available format
+                let swapchain_format = wgpu::TextureFormat::Bgra8UnormSrgb; // hardcode for now
+
                 // Create the bind group for the uniform buffer
                 let camera_bind_group_layout = gpu_resources.device.create_bind_group_layout(
                     &wgpu::BindGroupLayoutDescriptor {
@@ -1198,6 +1205,28 @@ async fn main() {
 
                 let texture_render_mode_buffer = Arc::new(texture_render_mode_buffer);
 
+                // // Create a multisampled texture (do this once, not every frame)
+                // let multisampled_texture =
+                //     gpu_resources
+                //         .device
+                //         .create_texture(&wgpu::TextureDescriptor {
+                //             size: wgpu::Extent3d {
+                //                 width: window_width,
+                //                 height: window_height,
+                //                 depth_or_array_layers: 1,
+                //             },
+                //             mip_level_count: 1,
+                //             sample_count: 4,
+                //             dimension: wgpu::TextureDimension::D2,
+                //             format: swapchain_format,
+                //             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                //             label: Some("Multisampled render texture"),
+                //             view_formats: &[],
+                //         });
+
+                // let multisampled_view =
+                //     multisampled_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
                 let pipeline_layout =
                     gpu_resources
                         .device
@@ -1261,12 +1290,6 @@ async fn main() {
                             ),
                         });
 
-                // let swapchain_capabilities = gpu_resources
-                //     .surface
-                //     .get_capabilities(&gpu_resources.adapter);
-                // let swapchain_format = swapchain_capabilities.formats[0]; // Choosing the first available format
-                let swapchain_format = wgpu::TextureFormat::Bgra8UnormSrgb; // hardcode for now
-
                 // Configure the render pipeline
                 let render_pipeline =
                     gpu_resources
@@ -1327,7 +1350,7 @@ async fn main() {
                             },
                         });
 
-                window_handle.render_pipeline = Some(render_pipeline);
+                // window_handle.render_pipeline = Some(render_pipeline);
                 // window_handle.depth_view = gpu_helper.depth_view;
 
                 println!("Initialized...");
@@ -1367,7 +1390,7 @@ async fn main() {
 
                 // window_handle.user_engine = Some(renderer_state_2);
                 // window_handle.set_editor(renderer_state_2);
-                window_handle.user_editor = Some(Box::new(renderer_state_2));
+                // window_handle.user_editor = Some(Box::new(renderer_state_2));
 
                 window_handle.handle_cursor_moved = handle_cursor_moved(
                     state_5.clone(),
@@ -1407,8 +1430,16 @@ async fn main() {
                 gpu_cloned2.lock().unwrap().gpu_resources = Some(Arc::clone(&gpu_resources));
                 // editor.gpu_resources = Some(Arc::clone(&gpu_resources));
                 window_handle.gpu_resources = Some(gpu_resources);
-                window_handle.gpu_helper = Some(gpu_cloned);
+                // window_handle.gpu_helper = Some(gpu_cloned);
                 // editor.window = window_handle.window.clone();
+                window_handle.engine_handle = Some(EngineHandle {
+                    render_pipeline: Some(render_pipeline),
+                    user_editor: Some(Box::new(renderer_state_2)),
+                    gpu_helper: Some(gpu_cloned),
+                    depth_view: None,
+                });
+
+                println!("Startup finished!");
             }
             .await;
         }
