@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
-use midpoint_engine::animations::render_skeleton::create_joint_rotations;
 use midpoint_engine::animations::skeleton::SkeletonPart;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::small_button;
@@ -98,13 +97,19 @@ pub fn part_item(
                         .expect("Couldn't find selected part");
                     let joints = selected_part_data.joints.clone();
                     let joints_2 = selected_part_data.joints.clone();
+                    // TOOD: precaulcate FK positions as well for idle pose
                     let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
-                        let position = Point3::new(
-                            joint.world_position[0], // world pos instead?
-                            joint.world_position[1],
-                            joint.world_position[2],
-                        );
-                        (joint.id.clone(), position)
+                        if let Some(ik_settings) = &joint.ik_settings {
+                            let position = Point3::new(
+                                ik_settings.position[0],
+                                ik_settings.position[1],
+                                ik_settings.position[2],
+                            );
+                            (joint.id.clone(), position)
+                        } else {
+                            let position = Point3::origin();
+                            (joint.id.clone(), position)
+                        }
                     }));
                     // let joint_rotations = create_joint_rotations(joints_2, &joint_positions);
                     // println!("joint_rotations {:?}", joint_rotations);
@@ -120,7 +125,8 @@ pub fn part_item(
                         part_id.clone(),
                         [0.0, 0.0, 0.0],
                         joints,
-                        selected_part_data.ik_chains.clone(),
+                        selected_part_data.k_chains.clone(),
+                        selected_part_data.attach_points.clone(),
                         &joint_positions,
                         // &joint_rotations,
                         None,

@@ -1,4 +1,4 @@
-use midpoint_engine::animations::motion_path::{EasingType, Keyframe, SkeletonMotionPath};
+use midpoint_engine::animations::motion_path::{EasingType, SkeletonMotionPath};
 use midpoint_engine::floem::event::EventListener;
 use midpoint_engine::floem::reactive::{create_rw_signal, RwSignal, SignalGet, SignalUpdate};
 use midpoint_engine::floem::taffy::Position;

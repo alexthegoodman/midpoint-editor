@@ -6,7 +6,6 @@ use bytemuck::Contiguous;
 use editor_state::{EditorState, ObjectEdit, StateHelper, UIMessage};
 use helpers::auth::read_auth_token;
 use helpers::websocket::{Call, WebSocketManager};
-use midpoint_engine::animations::motion_path::update_skeleton_animation;
 use midpoint_engine::core::Rays::{create_ray_debug_mesh, create_ray_from_mouse};
 use midpoint_engine::core::RendererState::{Point, RendererState, WindowSize};
 use midpoint_engine::core::Viewport::Viewport;
@@ -533,9 +532,10 @@ fn handle_cursor_moved(
                                     .expect("Couldn't find matching model");
                                 // Assuming first mesh's transform represents the whole model
                                 let mesh = &model.meshes[0];
+                                let euler = mesh.transform.rotation.euler_angles();
                                 [
                                     mesh.transform.position,
-                                    mesh.transform.rotation,
+                                    Vector3::new(euler.0, euler.1, euler.2),
                                     mesh.transform.scale,
                                 ]
                             }
@@ -545,9 +545,10 @@ fn handle_cursor_moved(
                                     .iter()
                                     .find(|m| m.id == selected_component.id)
                                     .expect("Couldn't find matching landscape");
+                                let euler = terrain_manager.transform.rotation.euler_angles();
                                 [
                                     terrain_manager.transform.position,
-                                    terrain_manager.transform.rotation,
+                                    Vector3::new(euler.0, euler.1, euler.2),
                                     terrain_manager.transform.scale,
                                 ]
                             }

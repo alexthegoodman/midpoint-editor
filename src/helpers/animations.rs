@@ -109,23 +109,26 @@ impl AnimationData {
             for keyframe in &path.keyframes {
                 // Update position keyframes
                 // if let Some(pos) = keyframe.position {
-                let uuid1 = Uuid::new_v4();
-                position_prop.keyframes.push(UIKeyframe {
-                    id: uuid1.to_string(),
-                    skel_key_id: keyframe.id.clone(),
-                    time: keyframe.base.time,
-                    value: KeyframeValue::Position([
-                        keyframe.base.position[0],
-                        keyframe.base.position[1],
-                        keyframe.base.position[2],
-                    ]),
-                    easing: keyframe
-                        .base
-                        .easing
-                        .as_ref()
-                        .expect("Couldn't get easing")
-                        .clone(),
-                });
+                if let Some(ik_settings) = keyframe.ik_settings.clone() {
+                    let uuid1 = Uuid::new_v4();
+                    position_prop.keyframes.push(UIKeyframe {
+                        id: uuid1.to_string(),
+                        skel_key_id: keyframe.id.clone(),
+                        time: keyframe.time,
+                        value: KeyframeValue::Position([
+                            ik_settings.start_joint_position[0],
+                            ik_settings.start_joint_position[1],
+                            ik_settings.start_joint_position[2],
+                        ]),
+                        easing: keyframe
+                            .easing
+                            .as_ref()
+                            .expect("Couldn't get easing")
+                            .clone(),
+                    });
+                    // TODO: represent other joint positions
+                }
+
                 // let uuid2 = Uuid::new_v4();
                 // position_prop.children[1].keyframes.push(UIKeyframe {
                 //     id: uuid2.to_string(),
@@ -156,19 +159,22 @@ impl AnimationData {
 
                 // Update rotation keyframes
                 // if let Some(rot) = keyframe.rotation {
-                let uuid4 = Uuid::new_v4();
-                rotation_prop.keyframes.push(UIKeyframe {
-                    id: uuid4.to_string(),
-                    skel_key_id: keyframe.id.clone(),
-                    time: keyframe.base.time,
-                    value: KeyframeValue::Rotation(keyframe.base.rotation),
-                    easing: keyframe
-                        .base
-                        .easing
-                        .as_ref()
-                        .expect("Couldn't get easing")
-                        .clone(),
-                });
+                if let Some(fk_settings) = keyframe.fk_settings.clone() {
+                    let uuid4 = Uuid::new_v4();
+                    rotation_prop.keyframes.push(UIKeyframe {
+                        id: uuid4.to_string(),
+                        skel_key_id: keyframe.id.clone(),
+                        time: keyframe.time,
+                        value: KeyframeValue::Rotation(fk_settings.start_joint_rotation),
+                        easing: keyframe
+                            .easing
+                            .as_ref()
+                            .expect("Couldn't get easing")
+                            .clone(),
+                    });
+                    // TODO: represent other joint rotations
+                }
+
                 // }
             }
 

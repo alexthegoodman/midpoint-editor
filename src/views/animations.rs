@@ -10,7 +10,7 @@ use super::part_properties::{self, part_properties};
 use super::shared::dynamic_img;
 use super::skeleton_browser::skeleton_browser;
 use super::skeleton_properties::skeleton_properties;
-use midpoint_engine::animations::motion_path::{AnimationPlayback, Keyframe, SkeletonMotionPath};
+use midpoint_engine::animations::motion_path::{AnimationPlayback, SkeletonMotionPath};
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{card_styles, small_button, tab_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};

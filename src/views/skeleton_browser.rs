@@ -104,13 +104,19 @@ pub fn skeleton_item(
 
                     let part_id = display_part.id.clone();
                     let joints = display_part.joints.clone();
+                    // TOOD: precaulcate FK positions as well for idle pose
                     let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
-                        let position = Point3::new(
-                            joint.world_position[0],
-                            joint.world_position[1],
-                            joint.world_position[2],
-                        );
-                        (joint.id.clone(), position)
+                        if let Some(ik_settings) = &joint.ik_settings {
+                            let position = Point3::new(
+                                ik_settings.position[0],
+                                ik_settings.position[1],
+                                ik_settings.position[2],
+                            );
+                            (joint.id.clone(), position)
+                        } else {
+                            let position = Point3::origin();
+                            (joint.id.clone(), position)
+                        }
                     }));
 
                     handle_add_skeleton_part(
@@ -124,7 +130,8 @@ pub fn skeleton_item(
                         part_id,
                         [0.0, 0.0, 0.0],
                         joints,
-                        display_part.ik_chains.clone(),
+                        display_part.k_chains.clone(),
+                        display_part.attach_points.clone(),
                         &joint_positions,
                         None,
                     );
@@ -144,13 +151,19 @@ pub fn skeleton_item(
 
                         let part_id = display_part.id.clone();
                         let joints = display_part.joints.clone();
+                        // TOOD: precaulcate FK positions as well for idle pose
                         let joint_positions = HashMap::from_iter(joints.iter().map(|joint| {
-                            let position = Point3::new(
-                                joint.world_position[0],
-                                joint.world_position[1],
-                                joint.world_position[2],
-                            );
-                            (joint.id.clone(), position)
+                            if let Some(ik_settings) = &joint.ik_settings {
+                                let position = Point3::new(
+                                    ik_settings.position[0],
+                                    ik_settings.position[1],
+                                    ik_settings.position[2],
+                                );
+                                (joint.id.clone(), position)
+                            } else {
+                                let position = Point3::origin();
+                                (joint.id.clone(), position)
+                            }
                         }));
 
                         let position = connection
@@ -170,7 +183,8 @@ pub fn skeleton_item(
                             part_id,
                             position,
                             joints,
-                            display_part.ik_chains.clone(),
+                            display_part.k_chains.clone(),
+                            display_part.attach_points.clone(),
                             &joint_positions,
                             Some(connection.clone()),
                         );
