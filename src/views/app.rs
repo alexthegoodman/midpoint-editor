@@ -45,7 +45,7 @@ pub fn project_view(
 ) -> impl IntoView {
     let object_selected_signal = create_rw_signal(false);
     let selected_object_id_signal = create_rw_signal(Uuid::nil());
-    let active_gizmo_signal = create_rw_signal("translation".to_string());
+    let active_gizmo_signal = create_rw_signal("translate".to_string());
     let current_view_signal = create_rw_signal("scene".to_string());
     let navigation_speed_signal = create_rw_signal(5.0);
 

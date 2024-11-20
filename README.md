@@ -1,7 +1,9 @@
-# Midpoint
+# Midpoint / Rust Game Engine
 
-Vision: Generate concepts then models then animations, all with full control. Bring your story to life!
+![alt text](assets/image.png "Midpoint on Windows")
 
-- Setup `commonos-server` (Node.js)
-- Setup `commonos-files` (Tauri + Vite)
-- Then setup `midpoint-editor` (Rust + Floem + wgpu)
+Vision: Place UX and AI at the center. Generate concepts and textures, then models, then animations, all with full control. Bring your story to life!
+
+- Setup `commonos-server` (Node.js) Used for uploading and generating
+- Setup `commonos-files` (Tauri + Vite) Also used for uploading and generating
+- Then setup `midpoint-editor` (Rust + Floem + wgpu) Leverages `midpoint-engine` and Floem to implement an editor
