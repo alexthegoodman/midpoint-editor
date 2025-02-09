@@ -183,13 +183,6 @@ impl TimelineGridView {
         };
 
         // Draw diamond shape
-        // let path = kurbo::BezPath::from_vec(vec![
-        //     kurbo::PathEl::MoveTo(center + kurbo::Vec2::new(0.0, -size)),
-        //     kurbo::PathEl::LineTo(center + kurbo::Vec2::new(size, 0.0)),
-        //     kurbo::PathEl::LineTo(center + kurbo::Vec2::new(0.0, size)),
-        //     kurbo::PathEl::LineTo(center + kurbo::Vec2::new(-size, 0.0)),
-        //     kurbo::PathEl::ClosePath,
-        // ]);
         let path = kurbo::BezPath::from_vec(vec![
             kurbo::PathEl::MoveTo(Point::new(
                 center.x + self.config.offset_x,
@@ -396,19 +389,15 @@ fn hit_test_keyframe(
         let property_height = row_height;
         let y_center = current_y + property_height / 2.0;
 
-        // if (point.y - y_center).abs() <= hit_radius {
         // Check keyframes
         for keyframe in &property.keyframes {
             let x = time_to_x(state, config.clone(), keyframe.time);
             let keyframe_point = Point::new(x, y_center);
 
-            // need to go through children too
-
             if point.distance(keyframe_point) <= hit_radius {
                 return Some((property.property_path.clone(), keyframe.clone()));
             }
         }
-        // }
 
         if property.children.len() > 0 {
             current_y += row_height; // for header expansion row
@@ -460,12 +449,10 @@ pub enum DragOperation {
 
 impl View for TimelineGridView {
     fn id(&self) -> ViewId {
-        // println!("get id");
         self.id
     }
 
     fn view_style(&self) -> Option<Style> {
-        // println!("view_style");
         Some(self.style.clone())
     }
 
@@ -474,10 +461,7 @@ impl View for TimelineGridView {
     }
 
     fn paint(&mut self, cx: &mut PaintCx) {
-        // println!("paint");
         // Draw background
-        // Draw background using a rectangle path instead of bounds
-        // let background_rect = kurbo::Rect::new(0.0, 0.0, self.config.width, self.config.height);
         let background_rect = kurbo::Rect::new(
             self.config.offset_x,
             self.config.offset_y,
@@ -485,8 +469,6 @@ impl View for TimelineGridView {
             self.config.offset_y + self.config.height,
         );
         cx.fill(&background_rect, Color::WHITE, 1.0);
-
-        // cx.fill(cx.bounds(), &Color::WHITE, 1.0);
 
         // Draw grid
         self.draw_time_grid(cx);
@@ -527,7 +509,6 @@ impl View for TimelineGridView {
 
     // Make sure compute_layout returns proper bounds
     fn compute_layout(&mut self, _cx: &mut ComputeLayoutCx) -> Option<Rect> {
-        println!("compute_layout");
         Some(Rect::new(
             self.config.offset_x,
             self.config.offset_y,
@@ -542,10 +523,7 @@ impl View for TimelineGridView {
         self.id.request_layout();
     }
 
-    // fn style_pass(&mut self, _cx: &mut StyleCx) {}
     fn layout(&mut self, _cx: &mut LayoutCx) -> NodeId {
-        // println!("layout");
-        // NodeId::new(0) // You'll need proper node ID management
         let node = self.id().new_taffy_node();
         node
     }
@@ -661,11 +639,6 @@ fn handle_mouse_down(
         animation_data.get().expect("Couldn't get animation data"),
         pos,
     ) {
-        // state_data.dragging = Some(DragOperation::Keyframe {
-        //     property_path,
-        //     original_time: time,
-        //     start_x: pos.x,
-        // });
         println!("start move keyframe {:?}", ui_keyframe.time);
         state.update(|s| {
             s.dragging = Some(DragOperation::Keyframe {
@@ -683,8 +656,6 @@ fn handle_mouse_down(
     // Check if clicking on timeline (for playhead)
     if pos.y <= config.header_height {
         let time = x_to_time(state, config, pos.x);
-        // state_data.current_time = time;
-        // state_data.dragging = Some(DragOperation::Playhead(pos.x));
         println!("start move playhead {:?}", time);
         state.update(|s| s.current_time = time);
         state.update(|s| s.dragging = Some(DragOperation::Playhead(pos.x)));
@@ -700,13 +671,11 @@ fn handle_mouse_move(
     animation_data: RwSignal<Option<AnimationData>>,
     pos: Point,
 ) -> EventPropagation {
-    // println!("handle_mouse_move");
     let state_data = state.get();
     if (state_data.dragging.is_some()) {
         let dragging = state_data.dragging.as_ref().expect("Couldn't get dragging");
         match dragging {
             DragOperation::Playhead(_) => {
-                // state_data.current_time = x_to_time(state, config.clone(), pos.x);
                 println!("moving playhead");
                 let value = x_to_time(state, config.clone(), pos.x);
                 state.update(|s| s.current_time = value);
@@ -739,10 +708,8 @@ fn handle_mouse_move(
                     animation_data.get().expect("Couldn't get animation data"),
                     pos,
                 ) {
-                    // state_data.hovered_keyframe = Some((property_path, time));
                     state.update(|s| s.hovered_keyframe = Some((property_path, ui_keyframe.time)));
                 } else {
-                    // state_data.hovered_keyframe = None;
                     state.update(|s| s.hovered_keyframe = None);
                 }
                 return EventPropagation::Continue;
@@ -754,9 +721,6 @@ fn handle_mouse_move(
 }
 
 fn handle_mouse_up(state: RwSignal<TimelineState>, _pos: Point) -> EventPropagation {
-    // let state = state.get();
-
-    // state.dragging = None;
     state.update(|s| s.dragging = None);
     EventPropagation::Stop
 }
@@ -768,9 +732,6 @@ fn handle_scroll(state: RwSignal<TimelineState>, delta: f64) -> EventPropagation
     if delta != 0.0 {
         // Adjust zoom level based on scroll
         let old_zoom = state_data.zoom_level;
-        // state.zoom_level = (state.zoom_level * (1.0 + delta * 0.001))
-        //     .max(0.1)
-        //     .min(10.0);
         state.update(|s| {
             s.zoom_level = (state_data.zoom_level * (1.0 + delta * 0.001))
                 .max(0.1)
@@ -778,9 +739,9 @@ fn handle_scroll(state: RwSignal<TimelineState>, delta: f64) -> EventPropagation
         });
 
         // Adjust scroll offset to keep the timeline position under the cursor
-        // You might want to use the cursor position for more precise zooming
+        // May want to use the cursor position for more precise zooming
         let zoom_ratio = state_data.zoom_level / old_zoom;
-        // state.scroll_offset *= zoom_ratio;
+
         state.update(|s| {
             s.scroll_offset *= zoom_ratio;
         });
@@ -790,123 +751,3 @@ fn handle_scroll(state: RwSignal<TimelineState>, delta: f64) -> EventPropagation
         EventPropagation::Continue
     }
 }
-
-// // Create test data for the timeline
-// pub fn create_test_timeline() -> impl View {
-//     let state = TimelineState {
-//         current_time: Duration::from_secs_f64(0.0),
-//         zoom_level: 1.0,
-//         scroll_offset: 0.0,
-//         selected_keyframes: Vec::new(),
-//         property_expansions: im::HashMap::from_iter([
-//             ("position".to_string(), true),
-//             ("rotation".to_string(), true),
-//         ]),
-//         dragging: None,
-//         hovered_keyframe: None,
-//     };
-
-//     let config = TimelineConfig {
-//         width: 1200.0,
-//         height: 300.0,
-//         header_height: 30.0,
-//         property_width: 200.0,
-//         row_height: 24.0,
-//         // offset_x: 325.0,
-//         // offset_y: 300.0,
-//         offset_x: 0.0,
-//         offset_y: 0.0,
-//     };
-
-//     // Create some test keyframes for position
-//     let position_x_keyframes = vec![
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(0.0),
-//             value: KeyframeValue::Position([0.0, 0.0, 0.0]),
-//             easing: EasingType::Linear,
-//         },
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(1.5),
-//             value: KeyframeValue::Position([100.0, 0.0, 0.0]),
-//             easing: EasingType::EaseInOut,
-//         },
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(3.0),
-//             value: KeyframeValue::Position([-50.0, 0.0, 0.0]),
-//             easing: EasingType::EaseIn,
-//         },
-//     ];
-
-//     let position_y_keyframes = vec![
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(0.0),
-//             value: KeyframeValue::Position([0.0, 0.0, 0.0]),
-//             easing: EasingType::Linear,
-//         },
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(2.0),
-//             value: KeyframeValue::Position([0.0, 150.0, 0.0]),
-//             easing: EasingType::EaseOut,
-//         },
-//     ];
-
-//     // Create test keyframes for rotation
-//     let rotation_keyframes = vec![
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(0.5),
-//             value: KeyframeValue::Rotation([0.0, 0.0, 0.0, 1.0]),
-//             easing: EasingType::Linear,
-//         },
-//         UIKeyframe {
-//             time: Duration::from_secs_f64(2.5),
-//             value: KeyframeValue::Rotation([0.0, 0.0, 0.707, 0.707]),
-//             easing: EasingType::EaseInOut,
-//         },
-//     ];
-
-//     // Create property hierarchy
-//     let animation_data = AnimationData {
-//         paths: create_test_motion_paths(), // We can add actual MotionPath data if needed
-//         duration: Duration::from_secs_f64(4.0),
-//         properties: vec![
-//             AnimationProperty {
-//                 name: "Position".to_string(),
-//                 property_path: "position".to_string(),
-//                 children: vec![
-//                     AnimationProperty {
-//                         name: "X".to_string(),
-//                         property_path: "position.x".to_string(),
-//                         children: Vec::new(),
-//                         keyframes: position_x_keyframes,
-//                         depth: 1,
-//                     },
-//                     AnimationProperty {
-//                         name: "Y".to_string(),
-//                         property_path: "position.y".to_string(),
-//                         children: Vec::new(),
-//                         keyframes: position_y_keyframes,
-//                         depth: 1,
-//                     },
-//                     AnimationProperty {
-//                         name: "Z".to_string(),
-//                         property_path: "position.z".to_string(),
-//                         children: Vec::new(),
-//                         keyframes: Vec::new(), // Empty for testing
-//                         depth: 1,
-//                     },
-//                 ],
-//                 keyframes: Vec::new(),
-//                 depth: 0,
-//             },
-//             AnimationProperty {
-//                 name: "Rotation".to_string(),
-//                 property_path: "rotation".to_string(),
-//                 children: Vec::new(),
-//                 keyframes: rotation_keyframes,
-//                 depth: 0,
-//             },
-//         ],
-//     };
-
-//     create_timeline(state, config, animation_data)
-// }
