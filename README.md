@@ -4,42 +4,14 @@
 
 Vision: Place UX and AI at the center. Generate concepts and textures, then models, then animations, all with full control. Bring your story to life!
 
-### Latest instructions
-- Pull `midpoint-engine` beside `midpoint-editor`
-- Use the relevant setup scripts to setup TripoSR (MIT) for generating 3D models
-    - `./scripts/manage-triposr.ps1` for Windows
-    - `./scripts/manage-triposr.sh` for Linux / MacOS
+### Instructions
 
-#### Linux / MacOS
-##### First time setup
-chmod +x manage-triposr.sh
-./manage-triposr.sh install
+- `cargo run --release`
 
-##### Check status
-./manage-triposr.sh status
+### Roadmap
 
-##### Process image
-./manage-triposr.sh run -i "examples/chair.png" -o "output"
-
-#### Windows
-##### First time setup
-.\manage-triposr.ps1 -Install
-
-##### Start the server
-.\manage-triposr.ps1 -Start
-
-##### Check status
-.\manage-triposr.ps1 -Status
-
-##### Stop the server
-.\manage-triposr.ps1 -Stop
-
-##### Process an image (manually)
-First, import the functions:
-. .\manage-triposr.ps1
-
-Then, process an image without texture baking:
-Invoke-TripoSR -InputImage "path/to/image.png" -OutputDir "output"
+- Will be using a local Hunyuan3D-2 instance for 3D model generation (avoiding the server and files repos which enabled syncing and cloud generation with TripoSR)
+- Will continue using Replicate for image generation, although likely without a server in between, or perhaps a lightweight local server (not the full commonos-server)
 
 ### Deprecated instructions
 
