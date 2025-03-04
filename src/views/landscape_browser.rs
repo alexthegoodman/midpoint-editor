@@ -18,7 +18,7 @@ use midpoint_engine::helpers::landscapes::upscale_tiff_heightmap;
 use midpoint_engine::helpers::saved_data::{
     ComponentData, ComponentKind, File, GenericProperties, LandscapeData, LandscapeProperties,
 };
-use midpoint_engine::helpers::utilities::{get_heightmap_dir, get_soilmap_dir};
+use midpoint_engine::helpers::utilities::{get_heightmap_dir, get_rockmap_dir, get_soilmap_dir};
 use rfd::FileDialog;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
@@ -380,7 +380,7 @@ pub fn landscape_browser(
                                 let original_rockmap_path =
                                     new_rockmap_path.get().expect("Couldn't get rockmap path");
                                 let rockmap_dir =
-                                    get_heightmap_dir(&project_id.to_string(), &new_id.to_string())
+                                    get_rockmap_dir(&project_id.to_string(), &new_id.to_string())
                                         .expect("Couldn't get rockmap dir");
 
                                 let rockmap_name = original_rockmap_path
