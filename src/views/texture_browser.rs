@@ -1,7 +1,9 @@
+use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
 use midpoint_engine::core::Viewport::Viewport;
+use midpoint_engine::floem::common::simple_button;
 use midpoint_engine::floem::common::small_button;
 use midpoint_engine::floem::ext_event::create_signal_from_tokio_channel;
 use midpoint_engine::floem::reactive::SignalGet;
@@ -15,6 +17,8 @@ use midpoint_engine::floem::views::{
 };
 use midpoint_engine::floem::IntoView;
 use midpoint_engine::helpers::saved_data::File;
+use midpoint_engine::helpers::utilities::get_textures_dir;
+use rfd::FileDialog;
 use tokio::spawn;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
@@ -105,76 +109,134 @@ pub fn texture_browser(
     // });
 
     v_stack((
-        h_stack((
-            // rich_text?
-            text_input(generate_field).style(|s| s.width(200.0)),
-            small_button(
-                if generate_disabled.get() {
-                    "Generating..."
-                } else {
-                    "Generate"
-                },
-                "plus",
-                {
-                    let generate_field = generate_field.clone();
+        // h_stack((
+        //     // rich_text?
+        //     text_input(generate_field).style(|s| s.width(200.0)),
+        //     small_button(
+        //         if generate_disabled.get() {
+        //             "Generating..."
+        //         } else {
+        //             "Generate"
+        //         },
+        //         "plus",
+        //         {
+        //             let generate_field = generate_field.clone();
 
-                    move |_| {
-                        let state_helper = state_2.lock().unwrap();
-                        let generate_field = generate_field.clone();
+        //             move |_| {
+        //                 let state_helper = state_2.lock().unwrap();
+        //                 let generate_field = generate_field.clone();
 
-                        println!("Prearting generation...");
+        //                 println!("Prearting generation...");
 
-                        generate_disabled.set(true);
+        //                 generate_disabled.set(true);
 
-                        // Get the data you need before spawning
-                        let renderer_state = state_helper
-                            .renderer_state
-                            .as_ref()
-                            .expect("Couldn't get RendererState")
-                            .lock()
-                            .unwrap();
-                        let selected_project_id = renderer_state
-                            .project_selected
-                            .as_ref()
-                            .expect("Couldn't get current project")
-                            .to_string();
+        //                 // Get the data you need before spawning
+        //                 let renderer_state = state_helper
+        //                     .renderer_state
+        //                     .as_ref()
+        //                     .expect("Couldn't get RendererState")
+        //                     .lock()
+        //                     .unwrap();
+        //                 let selected_project_id = renderer_state
+        //                     .project_selected
+        //                     .as_ref()
+        //                     .expect("Couldn't get current project")
+        //                     .to_string();
 
-                        let generated_field_val = generate_field.get();
+        //                 let generated_field_val = generate_field.get();
 
-                        // Use the runtime handle to spawn
-                        tokio::runtime::Handle::current().spawn(async move {
-                            // Now we can safely use generate_field inside async block
-                            let auth_token = read_auth_token();
+        //                 // Use the runtime handle to spawn
+        //                 tokio::runtime::Handle::current().spawn(async move {
+        //                     // Now we can safely use generate_field inside async block
+        //                     let auth_token = read_auth_token();
 
-                            println!(
-                                "Generating... {:?} {:?}",
-                                auth_token,
-                                generated_field_val.clone()
-                            );
+        //                     println!(
+        //                         "Generating... {:?} {:?}",
+        //                         auth_token,
+        //                         generated_field_val.clone()
+        //                     );
 
-                            let texture_data =
-                                generate_texture(auth_token, generated_field_val.clone()).await;
-                            let textureBase64 = texture_data
-                                .expect("Couldn't unwrap texture data")
-                                .generateTexture;
+        //                     let texture_data =
+        //                         generate_texture(auth_token, generated_field_val.clone()).await;
+        //                     let textureBase64 = texture_data
+        //                         .expect("Couldn't unwrap texture data")
+        //                         .generateTexture;
 
-                            println!("Saving...");
-                            // save texture to sync directory (to be uploaded to S3)
-                            let textureFilename = get_filename(generated_field_val.clone());
-                            let textureFilename = textureFilename + ".png";
+        //                     println!("Saving...");
+        //                     // save texture to sync directory (to be uploaded to S3)
+        //                     let textureFilename = get_filename(generated_field_val.clone());
+        //                     let textureFilename = textureFilename + ".png";
 
-                            save_texture(selected_project_id, textureBase64, textureFilename);
+        //                     save_texture(selected_project_id, textureBase64, textureFilename);
 
-                            // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
-                            println!("Syncing...");
-                        });
-                    }
-                },
-                generate_active,
-            )
-            .disabled(move || generate_disabled.get()),
-        ))
-        .style(|s| s.margin_bottom(7.0)),
+        //                     // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
+        //                     println!("Syncing...");
+        //                 });
+        //             }
+        //         },
+        //         generate_active,
+        //     )
+        //     .disabled(move || generate_disabled.get()),
+        // ))
+        // .style(|s| s.margin_bottom(7.0)),
+        v_stack((simple_button("Add Texture".to_string(), move |_| {
+            let original_file_path = FileDialog::new()
+                .add_filter("image", &["png"])
+                .set_directory("/")
+                .pick_file()
+                .expect("Couldn't get file path");
+
+            let new_id = Uuid::new_v4();
+
+            let state_helper = state_2.lock().unwrap();
+            let project_id = state_helper
+                .project_selected_signal
+                .expect("Couldn't get project signal")
+                .get();
+
+            let textures_dir =
+                get_textures_dir(&project_id.to_string()).expect("Couldn't get textures dir");
+
+            let texture_path = textures_dir.join(new_id.to_string() + ".png");
+
+            fs::copy(&original_file_path, &texture_path)
+                .expect("Couldn't copy heightmap to storage directory");
+
+            // Update SavedState and texture_data
+            let mut saved_state = state_helper
+                .saved_state
+                .as_ref()
+                .expect("Couldn't get saved state")
+                .lock()
+                .unwrap();
+
+            let textures = saved_state
+                .textures
+                .as_mut()
+                .expect("Couldn't get texture state");
+
+            let new_texture = File {
+                id: new_id.to_string(),
+                fileName: new_id.to_string(),
+                cloudfrontUrl: "".to_string(),
+                normalFilePath: texture_path
+                    .to_str()
+                    .expect("Couldn't get path string")
+                    .to_string(),
+            };
+
+            textures.push(new_texture);
+
+            texture_data.set(
+                saved_state
+                    .textures
+                    .as_ref()
+                    .expect("Couldn't get texture data")
+                    .clone(),
+            );
+
+            state_helper.save_saved_state(project_id, saved_state);
+        }),)),
         scroll(
             dyn_stack(
                 move || texture_data.get(),
