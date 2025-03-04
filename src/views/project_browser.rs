@@ -235,7 +235,7 @@ pub fn project_browser(
                     })
                 },
             )
-            // .style(|s| s.flex_col().column_gap(5).padding(10))
+            .style(|s| s.flex_col().column_gap(5).padding(10))
             .into_view(),
         ),
     ))

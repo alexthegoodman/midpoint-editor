@@ -1,7 +1,7 @@
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use super::shared::dynamic_img;
+use super::shared::{absoluate_dynamic_img, dynamic_img};
 use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
 use midpoint_engine::floem::common::{simple_button, small_button};
@@ -63,14 +63,14 @@ pub fn landscape_item(
     let landscape_id = landscape.id.clone();
 
     v_stack((
-        dynamic_img(
+        absoluate_dynamic_img(
             landscape
                 .rockmap
                 .as_ref()
                 .expect("Couldn't get rockmap")
                 .normalFilePath
                 .clone(),
-            rockmap_filename.clone(),
+            // rockmap_filename.clone(),
             120.0,
             120.0,
         )
