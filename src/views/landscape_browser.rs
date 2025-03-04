@@ -307,7 +307,7 @@ pub fn landscape_browser(
                     v_stack((
                         simple_button("Add Heightmap".to_string(), move |_| {
                             let file = FileDialog::new()
-                                .add_filter("image", &["tiff"])
+                                .add_filter("image", &["tif"])
                                 // .add_filter("rust", &["rs", "toml"])
                                 .set_directory("/")
                                 .pick_file();
