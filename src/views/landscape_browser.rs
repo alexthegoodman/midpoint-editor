@@ -1,9 +1,10 @@
+use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::shared::dynamic_img;
 use midpoint_engine::core::RendererState::ObjectConfig;
 use midpoint_engine::core::Viewport::Viewport;
-use midpoint_engine::floem::common::small_button;
+use midpoint_engine::floem::common::{simple_button, small_button};
 use midpoint_engine::floem::reactive::SignalGet;
 use midpoint_engine::floem::reactive::{create_effect, create_rw_signal, RwSignal, SignalUpdate};
 use midpoint_engine::floem::taffy::{FlexDirection, FlexWrap};
@@ -17,6 +18,8 @@ use midpoint_engine::helpers::landscapes::upscale_tiff_heightmap;
 use midpoint_engine::helpers::saved_data::{
     ComponentData, ComponentKind, File, GenericProperties, LandscapeData, LandscapeProperties,
 };
+use midpoint_engine::helpers::utilities::{get_heightmap_dir, get_soilmap_dir};
+use rfd::FileDialog;
 use uuid::Uuid;
 use wgpu::util::DeviceExt;
 
@@ -267,6 +270,12 @@ pub fn landscape_browser(
     let landscape_data: RwSignal<Vec<LandscapeData>> = create_rw_signal(Vec::new());
 
     let state_2 = Arc::clone(&state_helper);
+    let state_3 = Arc::clone(&state_helper);
+
+    let landscape_modal_open = create_rw_signal(false);
+    let new_heightmap_path = create_rw_signal(None);
+    let new_soilmap_path = create_rw_signal(None);
+    let new_rockmap_path = create_rw_signal(None);
 
     create_effect(move |_| {
         let state_helper = state_helper.lock().unwrap();
@@ -285,16 +294,187 @@ pub fn landscape_browser(
         );
     });
 
-    container((scroll(
-        dyn_stack(
-            move || landscape_data.get(),
-            move |landscape_data| landscape_data.id.clone(),
-            move |landscape_data| {
-                landscape_item(state_2.clone(), gpu_helper.clone(), landscape_data)
+    v_stack((
+        simple_button("Add Landscape".to_string(), move |_| {
+            landscape_modal_open.set(true);
+        }),
+        dyn_container(
+            move || landscape_modal_open.get(),
+            move |is_open| {
+                let state_3 = state_3.clone();
+
+                if is_open {
+                    v_stack((
+                        simple_button("Add Heightmap".to_string(), move |_| {
+                            let file = FileDialog::new()
+                                .add_filter("image", &["tiff"])
+                                // .add_filter("rust", &["rs", "toml"])
+                                .set_directory("/")
+                                .pick_file();
+
+                            new_heightmap_path.set(file);
+                        }),
+                        simple_button("Add Soil Map".to_string(), move |_| {
+                            let file = FileDialog::new()
+                                .add_filter("image", &["png"])
+                                // .add_filter("rust", &["rs", "toml"])
+                                .set_directory("/")
+                                .pick_file();
+
+                            new_soilmap_path.set(file);
+                        }),
+                        simple_button("Add Rock Map".to_string(), move |_| {
+                            let file = FileDialog::new()
+                                .add_filter("image", &["png"])
+                                // .add_filter("rust", &["rs", "toml"])
+                                .set_directory("/")
+                                .pick_file();
+
+                            new_rockmap_path.set(file);
+                        }),
+                        simple_button("Save Landscape".to_string(), move |_| {
+                            if (new_heightmap_path.get().is_some()
+                                && new_soilmap_path.get().is_some()
+                                && new_rockmap_path.get().is_some())
+                            {
+                                let new_id = Uuid::new_v4();
+
+                                let state_helper = state_3.lock().unwrap();
+                                let project_id = state_helper
+                                    .project_selected_signal
+                                    .expect("Couldn't get project signal")
+                                    .get();
+
+                                // Move Heightmap
+                                let original_heightmap_path = new_heightmap_path
+                                    .get()
+                                    .expect("Couldn't get heightmap path");
+                                let heightmap_dir =
+                                    get_heightmap_dir(&project_id.to_string(), &new_id.to_string())
+                                        .expect("Couldn't get heightmap dir");
+
+                                let heightmap_name = original_heightmap_path
+                                    .file_name()
+                                    .expect("Couldn't get file name");
+                                let new_heightmap_path = heightmap_dir.join(heightmap_name);
+
+                                fs::copy(&original_heightmap_path, &new_heightmap_path)
+                                    .expect("Couldn't copy heightmap to storage directory");
+
+                                // Move Soilmap
+                                let original_soilmap_path =
+                                    new_soilmap_path.get().expect("Couldn't get soilmap path");
+                                let soilmap_dir =
+                                    get_soilmap_dir(&project_id.to_string(), &new_id.to_string())
+                                        .expect("Couldn't get soilmap dir");
+
+                                let soilmap_name = original_soilmap_path
+                                    .file_name()
+                                    .expect("Couldn't get file name");
+                                let new_soilmap_path = soilmap_dir.join(soilmap_name);
+
+                                fs::copy(&original_soilmap_path, &new_soilmap_path)
+                                    .expect("Couldn't copy soilmap to storage directory");
+
+                                // Move Rockmap
+                                let original_rockmap_path =
+                                    new_rockmap_path.get().expect("Couldn't get rockmap path");
+                                let rockmap_dir =
+                                    get_heightmap_dir(&project_id.to_string(), &new_id.to_string())
+                                        .expect("Couldn't get rockmap dir");
+
+                                let rockmap_name = original_rockmap_path
+                                    .file_name()
+                                    .expect("Couldn't get file name");
+                                let new_rockmap_path = rockmap_dir.join(rockmap_name);
+
+                                fs::copy(&original_rockmap_path, &new_rockmap_path)
+                                    .expect("Couldn't copy rockmap to storage directory");
+
+                                // Set Landscape in SavedState and update landscape_data list
+                                let mut saved_state = state_helper
+                                    .saved_state
+                                    .as_ref()
+                                    .expect("Couldn't get saved state")
+                                    .lock()
+                                    .unwrap();
+
+                                let landscapes = saved_state
+                                    .landscapes
+                                    .as_mut()
+                                    .expect("Couldn't get saved landscapes");
+
+                                let new_landscape = LandscapeData {
+                                    id: new_id.to_string(),
+                                    heightmap: Some(File {
+                                        id: Uuid::new_v4().to_string(),
+                                        fileName: heightmap_name
+                                            .to_str()
+                                            .expect("Couldn't get string")
+                                            .to_string(),
+                                        cloudfrontUrl: "".to_string(),
+                                        normalFilePath: new_heightmap_path
+                                            .to_str()
+                                            .expect("Couldn't get path string")
+                                            .to_string(),
+                                    }),
+                                    rockmap: Some(File {
+                                        id: Uuid::new_v4().to_string(),
+                                        fileName: rockmap_name
+                                            .to_str()
+                                            .expect("Couldn't get string")
+                                            .to_string(),
+                                        cloudfrontUrl: "".to_string(),
+                                        normalFilePath: new_rockmap_path
+                                            .to_str()
+                                            .expect("Couldn't get path string")
+                                            .to_string(),
+                                    }),
+                                    soil: Some(File {
+                                        id: Uuid::new_v4().to_string(),
+                                        fileName: soilmap_name
+                                            .to_str()
+                                            .expect("Couldn't get string")
+                                            .to_string(),
+                                        cloudfrontUrl: "".to_string(),
+                                        normalFilePath: new_soilmap_path
+                                            .to_str()
+                                            .expect("Couldn't get path string")
+                                            .to_string(),
+                                    }),
+                                };
+
+                                landscapes.push(new_landscape);
+
+                                landscape_data.set(
+                                    saved_state
+                                        .landscapes
+                                        .as_ref()
+                                        .expect("Couldn't get landscape data")
+                                        .clone(),
+                                );
+
+                                state_helper.save_saved_state(project_id, saved_state);
+                            }
+                        }),
+                    ))
+                    .into_any()
+                } else {
+                    empty().into_any()
+                }
             },
-        )
-        .into_view(),
-    ),))
+        ),
+        scroll(
+            dyn_stack(
+                move || landscape_data.get(),
+                move |landscape_data| landscape_data.id.clone(),
+                move |landscape_data| {
+                    landscape_item(state_2.clone(), gpu_helper.clone(), landscape_data)
+                },
+            )
+            .into_view(),
+        ),
+    ))
     .style(|s| {
         s.flex_direction(FlexDirection::Row)
             .flex_wrap(FlexWrap::Wrap)
