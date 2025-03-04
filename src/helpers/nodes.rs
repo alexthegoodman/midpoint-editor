@@ -197,17 +197,17 @@ pub enum NodeInputs {
     },
 
     // Render Nodes
-    Render {
-        render_type: RenderType,
-        layer: i32,
-        blend_mode: BlendMode,
-        shader: Option<String>,
-    },
-    Camera {
-        projection_type: ProjectionType,
-        viewport: Rect,
-        priority: i32,
-    },
+    // Render {
+    //     render_type: RenderType,
+    //     layer: i32,
+    //     blend_mode: BlendMode,
+    //     shader: Option<String>,
+    // },
+    // Camera {
+    //     projection_type: ProjectionType,
+    //     viewport: Rect,
+    //     priority: i32,
+    // },
     UI {
         element_type: UIElementType,
         layout: LayoutType,
@@ -227,11 +227,11 @@ pub enum NodeInputs {
         operation: StringOperation,
         case_sensitive: bool,
     },
-    PhysicsOp {
-        operation: PhysicsOperation,
-        affects_collision: bool,
-        // force_type: ForceType,
-    },
+    // PhysicsOp {
+    //     operation: PhysicsOperation,
+    //     affects_collision: bool,
+    //     // force_type: ForceType,
+    // },
     AnimationOp {
         animation_type: AnimationType,
         duration: u32,
@@ -254,22 +254,22 @@ pub enum NodeInputs {
         spawn_rules: SpawnRules,
         max_instances: Option<u32>,
     },
-    Collision {
-        shape: CollisionShape,
-        layer: u32,
-        mask: u32,
-        trigger: bool,
-    },
+    // Collision {
+    //     shape: CollisionShape,
+    //     layer: u32,
+    //     mask: u32,
+    //     trigger: bool,
+    // },
     Timer {
         duration: u32,
         repeat: bool,
         start_on_create: bool,
     },
-    GameState {
-        state_type: GameStateType,
-        transitions: Vec<String>,
-        persistent: bool,
-    },
+    // GameState {
+    //     state_type: GameStateType,
+    //     transitions: Vec<String>,
+    //     persistent: bool,
+    // },
 }
 
 // Supporting types

@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use midpoint_engine::core::Viewport::Viewport;
-use midpoint_engine::floem::common::{alert, card_styles, create_icon, nav_button};
+use midpoint_engine::floem::common::{alert, card_styles, create_icon, nav_button, simple_button};
 use midpoint_engine::floem::event::{Event, EventListener, EventPropagation};
 use midpoint_engine::floem::keyboard::{Key, KeyCode, NamedKey};
 use midpoint_engine::floem::peniko::Color;
@@ -16,7 +16,7 @@ use midpoint_engine::floem::views::{
     container, dyn_container, dyn_stack, empty, h_stack, img, label, scroll, stack, svg, tab,
     text_input, v_stack, virtual_list, virtual_stack, VirtualDirection, VirtualItemSize,
 };
-use midpoint_engine::helpers::utilities::load_project_state;
+use midpoint_engine::helpers::utilities::{create_project_state, load_project_state};
 use midpoint_engine::startup::restore_renderer_from_saved;
 use uuid::Uuid;
 // use views::buttons::{nav_button, option_button, small_button};
@@ -78,10 +78,11 @@ pub fn project_browser(
     viewport: Arc<Mutex<Viewport>>,
     manager: Arc<WebSocketManager>,
 ) -> impl View {
-    // TODO: Alert for Start CommonOS File Manager to use Midpoint
     let projects = get_projects().expect("Couldn't get projects");
 
+    let state_helper_2 = Arc::clone(&state_helper);
     let gpu_2 = Arc::clone(&gpu_helper);
+    let gpu_3 = Arc::clone(&gpu_helper);
 
     let project_list = create_rw_signal(projects);
     let loading_project = create_rw_signal(false);
@@ -102,10 +103,57 @@ pub fn project_browser(
             },
         )
         .into_view(),
-        alert(
-            midpoint_engine::floem::common::AlertVariant::Info,
-            "Make sure CommonOS Files is running and you are signed in to assure you can generate concepts, models, and animations.".to_string(),
-        ).style(|s| s.margin_bottom(10.0)),
+        // alert(
+        //     midpoint_engine::floem::common::AlertVariant::Info,
+        //     "Make sure CommonOS Files is running and you are signed in to assure you can generate concepts, models, and animations.".to_string(),
+        // ).style(|s| s.margin_bottom(10.0)),
+        simple_button("Create Project".to_string(), move |_| {
+            println!("Creating project...");
+
+            let mut state_helper = state_helper_2.lock().unwrap();
+
+            let destination_view = "scene".to_string();
+
+            let project_id = Uuid::new_v4();
+
+            let new_state = create_project_state(&project_id.to_string())
+                .expect("Couldn't create project state");
+
+            println!("Opening new project...");
+
+            let saved_state = Arc::new(Mutex::new(new_state));
+            state_helper.saved_state = Some(saved_state.clone());
+
+            let project_selected = state_helper
+                .project_selected_signal
+                .expect("Couldn't get project selection signal");
+            project_selected.set(project_id);
+
+            let mut renderer_state = state_helper
+                .renderer_state
+                .as_mut()
+                .expect("Couldn't find RendererState")
+                .lock()
+                .unwrap();
+            renderer_state.project_selected = Some(project_id);
+            renderer_state.current_view = destination_view.clone();
+
+            drop(renderer_state);
+
+            // restore the saved state to the rendererstate
+            restore_renderer_from_saved(
+                gpu_3.clone(),
+                project_id.to_string(),
+                saved_state.clone(),
+                state_helper
+                    .renderer_state
+                    .as_ref()
+                    .cloned()
+                    .expect("Couldn't get RendererState"),
+            );
+
+            println!("Project selected {:?}", project_id);
+        }),
         (label(|| "Select a Project").style(|s| s.margin_bottom(4.0))),
         scroll(
             dyn_stack(
