@@ -210,54 +210,54 @@ pub fn landscape_item(
             active,
         )
         .disabled(move || disabled.get()),
-        small_button(
-            "Upscale by 10x",
-            "plus",
-            {
-                let landscape_id = landscape_id.clone();
-                let state_helper = state_2.clone();
-                let heightmap_filepath = landscape
-                    .heightmap
-                    .as_ref()
-                    .expect("Couldn't get heightmap path")
-                    .normalFilePath
-                    .clone();
-                let heightmap_filename = landscape
-                    .heightmap
-                    .as_ref()
-                    .expect("Couldn't get heightmap name")
-                    .fileName
-                    .clone();
+        // small_button(
+        //     "Upscale by 10x",
+        //     "plus",
+        //     {
+        //         let landscape_id = landscape_id.clone();
+        //         let state_helper = state_2.clone();
+        //         let heightmap_filepath = landscape
+        //             .heightmap
+        //             .as_ref()
+        //             .expect("Couldn't get heightmap path")
+        //             .normalFilePath
+        //             .clone();
+        //         let heightmap_filename = landscape
+        //             .heightmap
+        //             .as_ref()
+        //             .expect("Couldn't get heightmap name")
+        //             .fileName
+        //             .clone();
 
-                move |_| {
-                    let state_helper = state_helper.lock().unwrap();
-                    let renderer_state = state_helper
-                        .renderer_state
-                        .as_ref()
-                        .expect("Couldn't get RendererState");
-                    let renderer_state = renderer_state.lock().unwrap();
-                    let project_id = renderer_state
-                        .project_selected
-                        .expect("Couldn't get selected project id");
+        //         move |_| {
+        //             let state_helper = state_helper.lock().unwrap();
+        //             let renderer_state = state_helper
+        //                 .renderer_state
+        //                 .as_ref()
+        //                 .expect("Couldn't get RendererState");
+        //             let renderer_state = renderer_state.lock().unwrap();
+        //             let project_id = renderer_state
+        //                 .project_selected
+        //                 .expect("Couldn't get selected project id");
 
-                    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
-                    let upscaled_dir = sync_dir.join(format!(
-                        "midpoint/projects/{}/landscapes/{}/heightmaps/upscaled",
-                        project_id.to_string(),
-                        landscape_id,
-                    ));
-                    let upscaled_dir = upscaled_dir.as_path();
+        //             let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+        //             let upscaled_dir = sync_dir.join(format!(
+        //                 "midpoint/projects/{}/landscapes/{}/heightmaps/upscaled",
+        //                 project_id.to_string(),
+        //                 landscape_id,
+        //             ));
+        //             let upscaled_dir = upscaled_dir.as_path();
 
-                    let heightmap_full_path =
-                        sync_dir.join(format!("{}/{}", heightmap_filepath, heightmap_filename));
-                    let heightmap_full_path = heightmap_full_path.as_path();
+        //             let heightmap_full_path =
+        //                 sync_dir.join(format!("{}/{}", heightmap_filepath, heightmap_filename));
+        //             let heightmap_full_path = heightmap_full_path.as_path();
 
-                    upscale_tiff_heightmap(heightmap_full_path, upscaled_dir, 16, 16, 0.0)
-                        .expect("Couldn't upscale landscape");
-                }
-            },
-            upscale_active,
-        ),
+        //             upscale_tiff_heightmap(heightmap_full_path, upscaled_dir, 16, 16, 0.0)
+        //                 .expect("Couldn't upscale landscape");
+        //         }
+        //     },
+        //     upscale_active,
+        // ),
     ))
     .style(|s| s.width(120.0))
 }
