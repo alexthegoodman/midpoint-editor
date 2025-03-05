@@ -185,50 +185,51 @@ pub fn model_browser(
             let original_file_path = FileDialog::new()
                 .add_filter("model", &["glb"])
                 .set_directory("/")
-                .pick_file()
-                .expect("Couldn't get file path");
+                .pick_file();
 
-            let new_id = Uuid::new_v4();
+            if let Some(original_file_path) = original_file_path {
+                let new_id = Uuid::new_v4();
 
-            let state_helper = state_3.lock().unwrap();
-            let project_id = state_helper
-                .project_selected_signal
-                .expect("Couldn't get project signal")
-                .get();
+                let state_helper = state_3.lock().unwrap();
+                let project_id = state_helper
+                    .project_selected_signal
+                    .expect("Couldn't get project signal")
+                    .get();
 
-            let models_dir =
-                get_models_dir(&project_id.to_string()).expect("Couldn't get models dir");
+                let models_dir =
+                    get_models_dir(&project_id.to_string()).expect("Couldn't get models dir");
 
-            let model_path = models_dir.join(new_id.to_string() + ".glb");
+                let model_path = models_dir.join(new_id.to_string() + ".glb");
 
-            fs::copy(&original_file_path, &model_path)
-                .expect("Couldn't copy heightmap to storage directory");
+                fs::copy(&original_file_path, &model_path)
+                    .expect("Couldn't copy heightmap to storage directory");
 
-            // Update SavedState and model_data
-            let mut saved_state = state_helper
-                .saved_state
-                .as_ref()
-                .expect("Couldn't get saved state")
-                .lock()
-                .unwrap();
+                // Update SavedState and model_data
+                let mut saved_state = state_helper
+                    .saved_state
+                    .as_ref()
+                    .expect("Couldn't get saved state")
+                    .lock()
+                    .unwrap();
 
-            let models = &mut saved_state.models;
+                let models = &mut saved_state.models;
 
-            let new_model = File {
-                id: new_id.to_string(),
-                fileName: new_id.to_string() + ".glb",
-                cloudfrontUrl: "".to_string(),
-                normalFilePath: model_path
-                    .to_str()
-                    .expect("Couldn't get path string")
-                    .to_string(),
-            };
+                let new_model = File {
+                    id: new_id.to_string(),
+                    fileName: new_id.to_string() + ".glb",
+                    cloudfrontUrl: "".to_string(),
+                    normalFilePath: model_path
+                        .to_str()
+                        .expect("Couldn't get path string")
+                        .to_string(),
+                };
 
-            models.push(new_model);
+                models.push(new_model);
 
-            model_data.set(saved_state.models.clone());
+                model_data.set(saved_state.models.clone());
 
-            state_helper.save_saved_state(project_id, saved_state);
+                state_helper.save_saved_state(project_id, saved_state);
+            }
         }),
         scroll(
             dyn_stack(

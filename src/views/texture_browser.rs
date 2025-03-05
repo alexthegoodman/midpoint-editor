@@ -186,59 +186,60 @@ pub fn texture_browser(
             let original_file_path = FileDialog::new()
                 .add_filter("image", &["png"])
                 .set_directory("/")
-                .pick_file()
-                .expect("Couldn't get file path");
+                .pick_file();
 
-            let new_id = Uuid::new_v4();
+            if let Some(original_file_path) = original_file_path {
+                let new_id = Uuid::new_v4();
 
-            let state_helper = state_2.lock().unwrap();
-            let project_id = state_helper
-                .project_selected_signal
-                .expect("Couldn't get project signal")
-                .get();
+                let state_helper = state_2.lock().unwrap();
+                let project_id = state_helper
+                    .project_selected_signal
+                    .expect("Couldn't get project signal")
+                    .get();
 
-            let textures_dir =
-                get_textures_dir(&project_id.to_string()).expect("Couldn't get textures dir");
+                let textures_dir =
+                    get_textures_dir(&project_id.to_string()).expect("Couldn't get textures dir");
 
-            let texture_path = textures_dir.join(new_id.to_string() + ".png");
+                let texture_path = textures_dir.join(new_id.to_string() + ".png");
 
-            fs::copy(&original_file_path, &texture_path)
-                .expect("Couldn't copy heightmap to storage directory");
+                fs::copy(&original_file_path, &texture_path)
+                    .expect("Couldn't copy heightmap to storage directory");
 
-            // Update SavedState and texture_data
-            let mut saved_state = state_helper
-                .saved_state
-                .as_ref()
-                .expect("Couldn't get saved state")
-                .lock()
-                .unwrap();
-
-            let textures = saved_state
-                .textures
-                .as_mut()
-                .expect("Couldn't get texture state");
-
-            let new_texture = File {
-                id: new_id.to_string(),
-                fileName: new_id.to_string(),
-                cloudfrontUrl: "".to_string(),
-                normalFilePath: texture_path
-                    .to_str()
-                    .expect("Couldn't get path string")
-                    .to_string(),
-            };
-
-            textures.push(new_texture);
-
-            texture_data.set(
-                saved_state
-                    .textures
+                // Update SavedState and texture_data
+                let mut saved_state = state_helper
+                    .saved_state
                     .as_ref()
-                    .expect("Couldn't get texture data")
-                    .clone(),
-            );
+                    .expect("Couldn't get saved state")
+                    .lock()
+                    .unwrap();
 
-            state_helper.save_saved_state(project_id, saved_state);
+                let textures = saved_state
+                    .textures
+                    .as_mut()
+                    .expect("Couldn't get texture state");
+
+                let new_texture = File {
+                    id: new_id.to_string(),
+                    fileName: new_id.to_string(),
+                    cloudfrontUrl: "".to_string(),
+                    normalFilePath: texture_path
+                        .to_str()
+                        .expect("Couldn't get path string")
+                        .to_string(),
+                };
+
+                textures.push(new_texture);
+
+                texture_data.set(
+                    saved_state
+                        .textures
+                        .as_ref()
+                        .expect("Couldn't get texture data")
+                        .clone(),
+                );
+
+                state_helper.save_saved_state(project_id, saved_state);
+            }
         }),)),
         scroll(
             dyn_stack(
