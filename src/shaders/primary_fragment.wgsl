@@ -90,9 +90,13 @@ fn main(in: FragmentInput) -> @location(0) vec4<f32> {
     let diffuse = diffuse_strength * light_color;
     
     let final_color = base_color * (ambient + diffuse);
-    
+
     if (renderMode == 1) {
         return vec4<f32>(final_color, 1.0);
+    } else if (renderMode == 2) {
+        let reg_primary = textureSample(t_diffuse, s_diffuse, in.tex_coords, 0);
+
+        return vec4<f32>(reg_primary.rgb, 1.0);
     } else {
         return vec4<f32>(in.color * (ambient + diffuse), 1.0);
     }

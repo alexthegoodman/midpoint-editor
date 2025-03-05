@@ -362,7 +362,7 @@ fn create_render_callback<'a>() -> Box<RenderCallback<'a>> {
                             render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
                             render_pass.set_index_buffer(
                                 mesh.index_buffer.slice(..),
-                                wgpu::IndexFormat::Uint16,
+                                wgpu::IndexFormat::Uint32,
                             );
 
                             render_pass.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
@@ -1206,6 +1206,17 @@ async fn main() {
 
                 let texture_render_mode_buffer = Arc::new(texture_render_mode_buffer);
 
+                let reg_texture_render_mode_buffer =
+                    gpu_resources
+                        .device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Regular Texture Render Mode Buffer"),
+                            contents: bytemuck::cast_slice(&[2i32]), // Default to text mode
+                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                        });
+
+                let reg_texture_render_mode_buffer = Arc::new(reg_texture_render_mode_buffer);
+
                 // // Create a multisampled texture (do this once, not every frame)
                 // let multisampled_texture =
                 //     gpu_resources
@@ -1362,6 +1373,7 @@ async fn main() {
                     &gpu_resources.queue,
                     model_bind_group_layout.clone(),
                     texture_bind_group_layout.clone(),
+                    reg_texture_render_mode_buffer.clone(),
                     texture_render_mode_buffer.clone(),
                     color_render_mode_buffer.clone(),
                     camera_uniform_buffer.clone(),
