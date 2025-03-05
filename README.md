@@ -6,7 +6,15 @@ Vision: Place UX and AI at the center. Generate concepts and textures, then mode
 
 ### Instructions
 
-- `cargo run --release`
+```
+mkdir midpoint
+cd midpoint
+git clone https://github.com/alexthegoodman/common-floem.git
+git clone https://github.com/alexthegoodman/midpoint-engine.git
+git clone https://github.com/alexthegoodman/midpoint-editor.git
+cd midpoint-editor
+cargo run --release
+```
 
 ### Roadmap
 
