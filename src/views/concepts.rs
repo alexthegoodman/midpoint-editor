@@ -68,67 +68,67 @@ pub fn concept_item(
                 let label_text = concept_data_real.fileName.clone();
                 move || label_text.clone()
             }),
-            small_button(
-                "Generate Model",
-                "plus",
-                {
-                    let image_path = concept_data_real.normalFilePath.clone();
-                    let image_url = concept_data_real.cloudfrontUrl.clone();
-                    let label_text = concept_data_real.fileName.clone();
-                    // let label_text = label_text.clone();
+            // small_button(
+            //     "Generate Model",
+            //     "plus",
+            //     {
+            //         let image_path = concept_data_real.normalFilePath.clone();
+            //         let image_url = concept_data_real.cloudfrontUrl.clone();
+            //         let label_text = concept_data_real.fileName.clone();
+            //         // let label_text = label_text.clone();
 
-                    move |_| {
-                        let image_path = image_path.clone();
-                        let label_text = label_text.clone();
-                        let image_url = image_url.clone();
-                        let state_helper = state_helper.lock().unwrap();
-                        let btn_disabled_tx = btn_disabled_tx.clone();
+            //         move |_| {
+            //             let image_path = image_path.clone();
+            //             let label_text = label_text.clone();
+            //             let image_url = image_url.clone();
+            //             let state_helper = state_helper.lock().unwrap();
+            //             let btn_disabled_tx = btn_disabled_tx.clone();
 
-                        println!("Preparing generation...");
+            //             println!("Preparing generation...");
 
-                        generate_disabled.set(true);
+            //             generate_disabled.set(true);
 
-                        // Get the data you need before spawning
-                        let renderer_state = state_helper
-                            .renderer_state
-                            .as_ref()
-                            .expect("Couldn't get RendererState")
-                            .lock()
-                            .unwrap();
-                        let selected_project_id = renderer_state
-                            .project_selected
-                            .as_ref()
-                            .expect("Couldn't get current project")
-                            .to_string();
+            //             // Get the data you need before spawning
+            //             let renderer_state = state_helper
+            //                 .renderer_state
+            //                 .as_ref()
+            //                 .expect("Couldn't get RendererState")
+            //                 .lock()
+            //                 .unwrap();
+            //             let selected_project_id = renderer_state
+            //                 .project_selected
+            //                 .as_ref()
+            //                 .expect("Couldn't get current project")
+            //                 .to_string();
 
-                        // Use the runtime handle to spawn
-                        tokio::runtime::Handle::current().spawn(async move {
-                            // Now we can safely use generate_field inside async block
-                            let auth_token = read_auth_token();
+            //             // Use the runtime handle to spawn
+            //             tokio::runtime::Handle::current().spawn(async move {
+            //                 // Now we can safely use generate_field inside async block
+            //                 let auth_token = read_auth_token();
 
-                            println!("Generating model... {:?}", auth_token,);
+            //                 println!("Generating model... {:?}", auth_token,);
 
-                            let model_data = generate_model(auth_token, image_url).await;
-                            let modelBase64 = model_data
-                                .expect("Couldn't unwrap model data")
-                                .generateModel;
+            //                 let model_data = generate_model(auth_token, image_url).await;
+            //                 let modelBase64 = model_data
+            //                     .expect("Couldn't unwrap model data")
+            //                     .generateModel;
 
-                            println!("Saving...");
-                            // save texture to sync directory (to be uploaded to S3)
-                            let modelFilename = change_extension_to_glb(&label_text);
+            //                 println!("Saving...");
+            //                 // save texture to sync directory (to be uploaded to S3)
+            //                 let modelFilename = change_extension_to_glb(&label_text);
 
-                            save_model(selected_project_id, modelBase64, modelFilename);
+            //                 save_model(selected_project_id, modelBase64, modelFilename);
 
-                            // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
-                            println!("Syncing...");
+            //                 // Update saved state - rather update on websocket, its the only way to get cloudfrontUrl
+            //                 println!("Syncing...");
 
-                            btn_disabled_tx.send(false).unwrap();
-                        });
-                    }
-                },
-                generate_active,
-            )
-            .disabled(move || generate_disabled.get()),
+            //                 btn_disabled_tx.send(false).unwrap();
+            //             });
+            //         }
+            //     },
+            //     generate_active,
+            // )
+            // .disabled(move || generate_disabled.get()),
             small_button(
                 "Inspect Concept",
                 "plus",
