@@ -1,6 +1,7 @@
 use super::utilities::get_common_os_dir;
 use chrono::{DateTime, Local};
 use midpoint_engine::helpers::saved_data::SavedState;
+use midpoint_engine::helpers::utilities::get_projects_dir;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,8 +13,9 @@ pub struct ProjectInfo {
 }
 
 pub fn get_projects() -> Result<Vec<ProjectInfo>, Box<dyn std::error::Error>> {
-    let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
-    let projects_dir = sync_dir.join("midpoint/projects");
+    // let sync_dir = get_common_os_dir().expect("Couldn't get CommonOS directory");
+    // let projects_dir = sync_dir.join("midpoint/projects");
+    let projects_dir = get_projects_dir().expect("Couldn't get Projects directory");
 
     let mut projects = Vec::new();
 
